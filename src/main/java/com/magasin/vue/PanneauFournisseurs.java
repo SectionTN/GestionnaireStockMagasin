@@ -1,12 +1,11 @@
 package com.magasin.vue;
 
+import com.magasin.service.Appwrite;
+import com.magasin.vue.composants.UI;
+
 import com.magasin.Application;
-import com.magasin.controleur.ControleurFournisseurs;
 import com.magasin.modele.Fournisseur;
 import com.magasin.util.GestionnaireErreurs;
-import com.magasin.vue.composants.BoutonPrimaire;
-import com.magasin.vue.composants.EnTetePanneau;
-import com.magasin.vue.composants.TableurStylise;
 
 import javax.swing.BorderFactory;
 import javax.swing.JLabel;
@@ -27,7 +26,7 @@ public class PanneauFournisseurs extends JPanel {
             new Object[]{"ID", "Nom", "Contact"}, 0) {
         @Override public boolean isCellEditable(int r, int c) { return false; }
     };
-    private final JTable tableau = new TableurStylise(modele);
+    private final JTable tableau = new UI.Tableau(modele);
 
     public PanneauFournisseurs() {
         setLayout(new BorderLayout());
@@ -37,7 +36,7 @@ public class PanneauFournisseurs extends JPanel {
     }
 
     private void construire() {
-        add(new EnTetePanneau("Gestion des fournisseurs",
+        add(new UI.EnTete("Gestion des fournisseurs",
                 "Repertoire des partenaires et points de contact"), BorderLayout.NORTH);
 
         JPanel centre = new JPanel(new BorderLayout());
@@ -55,10 +54,10 @@ public class PanneauFournisseurs extends JPanel {
         barre.setBackground(Color.WHITE);
         barre.setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 12));
 
-        BoutonPrimaire bAj = new BoutonPrimaire("Ajouter");
-        BoutonPrimaire bMo = new BoutonPrimaire("Modifier", new Color(0xF3F4F6), new Color(0x111827));
-        BoutonPrimaire bSu = new BoutonPrimaire("Supprimer", Application.COULEUR_DANGER, Color.WHITE);
-        BoutonPrimaire bRa = new BoutonPrimaire("Rafraichir", new Color(0xF3F4F6), new Color(0x111827));
+        UI.BoutonPrimaire bAj = new UI.BoutonPrimaire("Ajouter");
+        UI.BoutonPrimaire bMo = new UI.BoutonPrimaire("Modifier", new Color(0xF3F4F6), new Color(0x111827));
+        UI.BoutonPrimaire bSu = new UI.BoutonPrimaire("Supprimer", Application.COULEUR_DANGER, Color.WHITE);
+        UI.BoutonPrimaire bRa = new UI.BoutonPrimaire("Rafraichir", new Color(0xF3F4F6), new Color(0x111827));
 
         bAj.addActionListener(e -> ajouter());
         bMo.addActionListener(e -> modifier());
@@ -73,7 +72,7 @@ public class PanneauFournisseurs extends JPanel {
 
     private void ajouter() {
         Fournisseur f = DialogueFournisseur.afficher(this, null);
-        if (f != null) executer(() -> ControleurFournisseurs.ajouter(f), "Fournisseur ajoute.");
+        if (f != null) executer(() -> Appwrite.ajouterFournisseur(f), "Fournisseur ajoute.");
     }
 
     private void modifier() {
@@ -82,14 +81,14 @@ public class PanneauFournisseurs extends JPanel {
         Fournisseur f = DialogueFournisseur.afficher(this, cur);
         if (f == null) return;
         f.setId(cur.getId());
-        executer(() -> ControleurFournisseurs.modifier(f), "Fournisseur modifie.");
+        executer(() -> Appwrite.modifierFournisseur(f), "Fournisseur modifie.");
     }
 
     private void supprimer() {
         Fournisseur cur = selectionne();
         if (cur == null) { GestionnaireErreurs.erreur(this, "Veuillez selectionner un fournisseur."); return; }
         if (!GestionnaireErreurs.confirmer(this, "Supprimer \"" + cur.getNom() + "\" ?")) return;
-        executer(() -> { ControleurFournisseurs.supprimer(cur.getId()); return null; }, "Fournisseur supprime.");
+        executer(() -> { Appwrite.supprimerFournisseur(cur.getId()); return null; }, "Fournisseur supprime.");
     }
 
     private Fournisseur selectionne() {
@@ -103,7 +102,7 @@ public class PanneauFournisseurs extends JPanel {
     public void rafraichir() {
         new SwingWorker<List<Fournisseur>, Void>() {
             @Override protected List<Fournisseur> doInBackground() throws Exception {
-                return ControleurFournisseurs.listerTout();
+                return Appwrite.listerFournisseurs();
             }
             @Override protected void done() {
                 try {

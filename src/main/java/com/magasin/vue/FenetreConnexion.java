@@ -1,10 +1,11 @@
 package com.magasin.vue;
 
+import com.magasin.service.Appwrite;
+import com.magasin.vue.composants.UI;
+
 import com.magasin.Application;
-import com.magasin.controleur.ControleurConnexion;
-import com.magasin.vue.composants.BoutonPrimaire;
-import com.magasin.vue.composants.PanneauCarte;
-import com.magasin.vue.composants.PanneauGradient;
+import com.magasin.modele.Utilisateur;
+import com.magasin.securite.SessionUtilisateur;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -59,7 +60,7 @@ public class FenetreConnexion extends JFrame {
     }
 
     private JPanel construirePanneauIllustration() {
-        PanneauGradient pg = new PanneauGradient(
+        UI.Gradient pg = new UI.Gradient(
                 new Color(0x2D6CDF), new Color(0x6A4DF2));
         pg.setPreferredSize(new Dimension(380, 460));
         pg.setLayout(new BoxLayout(pg, BoxLayout.Y_AXIS));
@@ -89,7 +90,7 @@ public class FenetreConnexion extends JFrame {
     }
 
     private JPanel construirePanneauFormulaire() {
-        PanneauCarte carte = new PanneauCarte(20, Color.WHITE);
+        UI.Carte carte = new UI.Carte(20, Color.WHITE);
         carte.setLayout(new BoxLayout(carte, BoxLayout.Y_AXIS));
         carte.setBorder(BorderFactory.createEmptyBorder(48, 48, 48, 48));
 
@@ -116,7 +117,7 @@ public class FenetreConnexion extends JFrame {
         champMotDePasse.setAlignmentX(0f);
         champMotDePasse.setFont(new Font("Segoe UI", Font.PLAIN, 14));
 
-        BoutonPrimaire bouton = new BoutonPrimaire("Se connecter");
+        UI.BoutonPrimaire bouton = new UI.BoutonPrimaire("Se connecter");
         bouton.setAlignmentX(0f);
         bouton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
         bouton.addActionListener(e -> tenterConnexion());
@@ -162,17 +163,34 @@ public class FenetreConnexion extends JFrame {
     }
 
     private void tenterConnexion() {
-        String u = champUsername.getText().trim();
-        String p = new String(champMotDePasse.getPassword());
+        final String u = champUsername.getText().trim();
+        final String p = new String(champMotDePasse.getPassword());
         etiquetteMessage.setText(" ");
-        ControleurConnexion.connecter(this, u, p, message -> {
-            etiquetteMessage.setText(message);
-            etiquetteMessage.setForeground(Application.COULEUR_DANGER);
-        });
+
+        if (u.isBlank()) { afficherErreur("Veuillez saisir un nom d'utilisateur."); return; }
+        if (p.isEmpty()) { afficherErreur("Veuillez saisir un mot de passe."); return; }
+
+        new javax.swing.SwingWorker<Utilisateur, Void>() {
+            @Override protected Utilisateur doInBackground() throws Exception {
+                return Appwrite.authentifier(u, p);
+            }
+            @Override protected void done() {
+                try {
+                    Utilisateur ut = get();
+                    if (ut == null) { afficherErreur("Identifiants incorrects."); return; }
+                    SessionUtilisateur.connecter(ut);
+                    dispose();
+                    new FenetrePrincipale().setVisible(true);
+                } catch (Exception ex) {
+                    Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
+                    afficherErreur("Echec : " + cause.getMessage());
+                }
+            }
+        }.execute();
     }
 
-    public void afficherMessage(String message, boolean succes) {
+    private void afficherErreur(String message) {
         etiquetteMessage.setText(message);
-        etiquetteMessage.setForeground(succes ? Application.COULEUR_SUCCES : Application.COULEUR_DANGER);
+        etiquetteMessage.setForeground(Application.COULEUR_DANGER);
     }
 }

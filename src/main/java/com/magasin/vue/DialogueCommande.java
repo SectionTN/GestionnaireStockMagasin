@@ -1,9 +1,11 @@
 package com.magasin.vue;
 
+import com.magasin.service.Appwrite;
+import com.magasin.vue.composants.UI;
+
 import com.magasin.modele.Commande;
 import com.magasin.modele.Produit;
 import com.magasin.util.GestionnaireErreurs;
-import com.magasin.vue.composants.BoutonPrimaire;
 
 import javax.swing.BorderFactory;
 import javax.swing.DefaultComboBoxModel;
@@ -69,7 +71,7 @@ public final class DialogueCommande {
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 8));
         actions.setBackground(Color.WHITE);
         JButton annuler = new JButton("Annuler");
-        BoutonPrimaire valider = new BoutonPrimaire(existant == null ? "Enregistrer" : "Mettre a jour");
+        UI.BoutonPrimaire valider = new UI.BoutonPrimaire(existant == null ? "Enregistrer" : "Mettre a jour");
         actions.add(annuler); actions.add(valider);
 
         d.setLayout(new BorderLayout());

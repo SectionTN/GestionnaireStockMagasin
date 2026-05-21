@@ -1,12 +1,11 @@
 package com.magasin.vue;
 
+import com.magasin.service.Appwrite;
+import com.magasin.vue.composants.UI;
+
 import com.magasin.Application;
-import com.magasin.controleur.ControleurProduits;
 import com.magasin.modele.Produit;
 import com.magasin.util.GestionnaireErreurs;
-import com.magasin.vue.composants.BoutonPrimaire;
-import com.magasin.vue.composants.EnTetePanneau;
-import com.magasin.vue.composants.TableurStylise;
 
 import javax.swing.BorderFactory;
 import javax.swing.JLabel;
@@ -29,7 +28,7 @@ public class PanneauProduits extends JPanel {
             new Object[]{"ID", "Nom", "Quantite", "Prix", "Fournisseur"}, 0) {
         @Override public boolean isCellEditable(int r, int c) { return false; }
     };
-    private final JTable tableau = new TableurStylise(modele);
+    private final JTable tableau = new UI.Tableau(modele);
 
     public PanneauProduits() {
         setLayout(new BorderLayout());
@@ -39,7 +38,7 @@ public class PanneauProduits extends JPanel {
     }
 
     private void construire() {
-        add(new EnTetePanneau("Gestion des produits",
+        add(new UI.EnTete("Gestion des produits",
                 "Ajouter, modifier ou supprimer des articles du stock"),
             BorderLayout.NORTH);
 
@@ -60,12 +59,12 @@ public class PanneauProduits extends JPanel {
         barre.setBackground(Color.WHITE);
         barre.setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 12));
 
-        BoutonPrimaire bAjouter = new BoutonPrimaire("Ajouter");
-        BoutonPrimaire bModifier = new BoutonPrimaire("Modifier",
+        UI.BoutonPrimaire bAjouter = new UI.BoutonPrimaire("Ajouter");
+        UI.BoutonPrimaire bModifier = new UI.BoutonPrimaire("Modifier",
                 new Color(0xF3F4F6), new Color(0x111827));
-        BoutonPrimaire bSupprimer = new BoutonPrimaire("Supprimer",
+        UI.BoutonPrimaire bSupprimer = new UI.BoutonPrimaire("Supprimer",
                 Application.COULEUR_DANGER, Color.WHITE);
-        BoutonPrimaire bRafraichir = new BoutonPrimaire("Rafraichir",
+        UI.BoutonPrimaire bRafraichir = new UI.BoutonPrimaire("Rafraichir",
                 new Color(0xF3F4F6), new Color(0x111827));
 
         bAjouter.addActionListener(e -> ajouter());
@@ -89,7 +88,7 @@ public class PanneauProduits extends JPanel {
     private void ajouter() {
         Produit p = DialogueProduit.afficher((Component) this, null);
         if (p == null) return;
-        executerService(() -> ControleurProduits.ajouter(p), "Produit ajoute.");
+        executerService(() -> Appwrite.ajouterProduit(p), "Produit ajoute.");
     }
 
     private void modifier() {
@@ -101,7 +100,7 @@ public class PanneauProduits extends JPanel {
         Produit modifie = DialogueProduit.afficher((Component) this, p);
         if (modifie == null) return;
         modifie.setId(p.getId());
-        executerService(() -> ControleurProduits.modifier(modifie), "Produit modifie.");
+        executerService(() -> Appwrite.modifierProduit(modifie), "Produit modifie.");
     }
 
     private void supprimer() {
@@ -112,7 +111,7 @@ public class PanneauProduits extends JPanel {
         }
         if (!GestionnaireErreurs.confirmer(this,
                 "Supprimer definitivement le produit \"" + p.getNom() + "\" ?")) return;
-        executerService(() -> { ControleurProduits.supprimer(p.getId()); return null; }, "Produit supprime.");
+        executerService(() -> { Appwrite.supprimerProduit(p.getId()); return null; }, "Produit supprime.");
     }
 
     private Produit produitSelectionne() {
@@ -130,7 +129,7 @@ public class PanneauProduits extends JPanel {
     public void rafraichir() {
         new SwingWorker<List<Produit>, Void>() {
             @Override protected List<Produit> doInBackground() throws Exception {
-                return ControleurProduits.listerTout();
+                return Appwrite.listerProduits();
             }
             @Override protected void done() {
                 try {

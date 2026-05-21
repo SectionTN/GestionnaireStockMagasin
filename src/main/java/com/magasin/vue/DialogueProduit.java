@@ -1,8 +1,10 @@
 package com.magasin.vue;
 
+import com.magasin.service.Appwrite;
+import com.magasin.vue.composants.UI;
+
 import com.magasin.modele.Produit;
 import com.magasin.util.GestionnaireErreurs;
-import com.magasin.vue.composants.BoutonPrimaire;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -59,7 +61,7 @@ public final class DialogueProduit {
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 8));
         actions.setBackground(Color.WHITE);
         JButton annuler = new JButton("Annuler");
-        BoutonPrimaire valider = new BoutonPrimaire(existant == null ? "Ajouter" : "Enregistrer");
+        UI.BoutonPrimaire valider = new UI.BoutonPrimaire(existant == null ? "Ajouter" : "Enregistrer");
         actions.add(annuler);
         actions.add(valider);
 

@@ -1,13 +1,12 @@
 package com.magasin.vue;
 
+import com.magasin.service.Appwrite;
+import com.magasin.vue.composants.UI;
+
 import com.magasin.Application;
-import com.magasin.controleur.ControleurCommandes;
 import com.magasin.modele.Commande;
 import com.magasin.modele.Produit;
 import com.magasin.util.GestionnaireErreurs;
-import com.magasin.vue.composants.BoutonPrimaire;
-import com.magasin.vue.composants.EnTetePanneau;
-import com.magasin.vue.composants.TableurStylise;
 
 import javax.swing.BorderFactory;
 import javax.swing.JLabel;
@@ -30,7 +29,7 @@ public class PanneauCommandes extends JPanel {
             new Object[]{"ID", "Produit", "Quantite", "Date"}, 0) {
         @Override public boolean isCellEditable(int r, int c) { return false; }
     };
-    private final JTable tableau = new TableurStylise(modele);
+    private final JTable tableau = new UI.Tableau(modele);
     private List<Produit> produitsCache = List.of();
     private final Map<String, String> nomParId = new HashMap<>();
 
@@ -42,7 +41,7 @@ public class PanneauCommandes extends JPanel {
     }
 
     private void construire() {
-        add(new EnTetePanneau("Gestion des commandes",
+        add(new UI.EnTete("Gestion des commandes",
                 "Enregistrer et suivre les commandes en cours et passees"), BorderLayout.NORTH);
 
         JPanel centre = new JPanel(new BorderLayout());
@@ -60,10 +59,10 @@ public class PanneauCommandes extends JPanel {
         barre.setBackground(Color.WHITE);
         barre.setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 12));
 
-        BoutonPrimaire bAj = new BoutonPrimaire("Enregistrer");
-        BoutonPrimaire bMo = new BoutonPrimaire("Modifier", new Color(0xF3F4F6), new Color(0x111827));
-        BoutonPrimaire bSu = new BoutonPrimaire("Supprimer", Application.COULEUR_DANGER, Color.WHITE);
-        BoutonPrimaire bRa = new BoutonPrimaire("Rafraichir", new Color(0xF3F4F6), new Color(0x111827));
+        UI.BoutonPrimaire bAj = new UI.BoutonPrimaire("Enregistrer");
+        UI.BoutonPrimaire bMo = new UI.BoutonPrimaire("Modifier", new Color(0xF3F4F6), new Color(0x111827));
+        UI.BoutonPrimaire bSu = new UI.BoutonPrimaire("Supprimer", Application.COULEUR_DANGER, Color.WHITE);
+        UI.BoutonPrimaire bRa = new UI.BoutonPrimaire("Rafraichir", new Color(0xF3F4F6), new Color(0x111827));
 
         bAj.addActionListener(e -> ajouter());
         bMo.addActionListener(e -> modifier());
@@ -82,7 +81,7 @@ public class PanneauCommandes extends JPanel {
             return;
         }
         Commande c = DialogueCommande.afficher(this, null, produitsCache);
-        if (c != null) executer(() -> ControleurCommandes.ajouter(c), "Commande enregistree.");
+        if (c != null) executer(() -> Appwrite.ajouterCommande(c), "Commande enregistree.");
     }
 
     private void modifier() {
@@ -91,7 +90,7 @@ public class PanneauCommandes extends JPanel {
         Commande c = DialogueCommande.afficher(this, cur, produitsCache);
         if (c == null) return;
         c.setId(cur.getId());
-        executer(() -> ControleurCommandes.modifier(c), "Commande modifiee.");
+        executer(() -> Appwrite.modifierCommande(c), "Commande modifiee.");
     }
 
     private void supprimer() {
@@ -101,7 +100,7 @@ public class PanneauCommandes extends JPanel {
         if (!GestionnaireErreurs.confirmer(this,
                 "Supprimer cette commande de " + cur.getQuantite() + " x \"" + nomProduit + "\" ?\n"
                 + "Le stock du produit sera restitue.")) return;
-        executer(() -> { ControleurCommandes.supprimer(cur.getId()); return null; }, "Commande supprimee.");
+        executer(() -> { Appwrite.supprimerCommande(cur.getId()); return null; }, "Commande supprimee.");
     }
 
     private Commande selectionnee() {
@@ -121,8 +120,8 @@ public class PanneauCommandes extends JPanel {
     public void rafraichir() {
         new SwingWorker<Object[], Void>() {
             @Override protected Object[] doInBackground() throws Exception {
-                List<Produit> prods = ControleurCommandes.listerProduits();
-                List<Commande> cmds = ControleurCommandes.listerTout();
+                List<Produit> prods = Appwrite.listerProduits();
+                List<Commande> cmds = Appwrite.listerCommandes();
                 return new Object[]{prods, cmds};
             }
             @Override @SuppressWarnings("unchecked")

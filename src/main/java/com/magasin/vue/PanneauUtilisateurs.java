@@ -1,13 +1,12 @@
 package com.magasin.vue;
 
+import com.magasin.service.Appwrite;
+import com.magasin.vue.composants.UI;
+
 import com.magasin.Application;
 import com.magasin.modele.Utilisateur;
 import com.magasin.securite.SessionUtilisateur;
-import com.magasin.service.ServiceUtilisateur;
 import com.magasin.util.GestionnaireErreurs;
-import com.magasin.vue.composants.BoutonPrimaire;
-import com.magasin.vue.composants.EnTetePanneau;
-import com.magasin.vue.composants.TableurStylise;
 
 import javax.swing.BorderFactory;
 import javax.swing.JLabel;
@@ -29,7 +28,7 @@ public class PanneauUtilisateurs extends JPanel {
             new Object[]{"ID", "Nom d'utilisateur", "Role"}, 0) {
         @Override public boolean isCellEditable(int r, int c) { return false; }
     };
-    private final JTable tableau = new TableurStylise(modele);
+    private final JTable tableau = new UI.Tableau(modele);
 
     public PanneauUtilisateurs() {
         setLayout(new BorderLayout());
@@ -39,7 +38,7 @@ public class PanneauUtilisateurs extends JPanel {
     }
 
     private void construire() {
-        add(new EnTetePanneau("Gestion des utilisateurs",
+        add(new UI.EnTete("Gestion des utilisateurs",
                 "Comptes et roles (administrateur ou gestionnaire)"), BorderLayout.NORTH);
 
         JPanel centre = new JPanel(new BorderLayout());
@@ -57,10 +56,10 @@ public class PanneauUtilisateurs extends JPanel {
         barre.setBackground(Color.WHITE);
         barre.setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 12));
 
-        BoutonPrimaire bAj = new BoutonPrimaire("Ajouter");
-        BoutonPrimaire bMo = new BoutonPrimaire("Modifier", new Color(0xF3F4F6), new Color(0x111827));
-        BoutonPrimaire bSu = new BoutonPrimaire("Supprimer", Application.COULEUR_DANGER, Color.WHITE);
-        BoutonPrimaire bRa = new BoutonPrimaire("Rafraichir", new Color(0xF3F4F6), new Color(0x111827));
+        UI.BoutonPrimaire bAj = new UI.BoutonPrimaire("Ajouter");
+        UI.BoutonPrimaire bMo = new UI.BoutonPrimaire("Modifier", new Color(0xF3F4F6), new Color(0x111827));
+        UI.BoutonPrimaire bSu = new UI.BoutonPrimaire("Supprimer", Application.COULEUR_DANGER, Color.WHITE);
+        UI.BoutonPrimaire bRa = new UI.BoutonPrimaire("Rafraichir", new Color(0xF3F4F6), new Color(0x111827));
 
         bAj.addActionListener(e -> ajouter());
         bMo.addActionListener(e -> modifier());
@@ -76,7 +75,7 @@ public class PanneauUtilisateurs extends JPanel {
     private void ajouter() {
         DialogueUtilisateur.Resultat r = DialogueUtilisateur.afficher(this, null);
         if (r == null) return;
-        executer(() -> ServiceUtilisateur.ajouter(
+        executer(() -> Appwrite.ajouterUtilisateur(
                 r.utilisateur.getUsername(), r.motDePasseClair, r.utilisateur.getRole()),
                 "Utilisateur ajoute.");
     }
@@ -86,14 +85,14 @@ public class PanneauUtilisateurs extends JPanel {
         if (sel == null) { GestionnaireErreurs.erreur(this, "Veuillez selectionner un utilisateur."); return; }
         // Recuperer le hash courant pour conserver le mot de passe si non modifie
         try {
-            Utilisateur complet = ServiceUtilisateur.trouverParUsername(sel.getUsername());
+            Utilisateur complet = Appwrite.obtenirUtilisateur(sel.getId());
             if (complet != null) sel = complet;
         } catch (Exception ex) { /* ignore — on continuera avec sel partiel */ }
 
         DialogueUtilisateur.Resultat r = DialogueUtilisateur.afficher(this, sel);
         if (r == null) return;
         Utilisateur u = r.utilisateur;
-        executer(() -> ServiceUtilisateur.modifier(u, r.motDePasseClair), "Utilisateur modifie.");
+        executer(() -> Appwrite.modifierUtilisateur(u, r.motDePasseClair), "Utilisateur modifie.");
     }
 
     private void supprimer() {
@@ -106,7 +105,7 @@ public class PanneauUtilisateurs extends JPanel {
         }
         if (!GestionnaireErreurs.confirmer(this,
                 "Supprimer definitivement \"" + sel.getUsername() + "\" ?")) return;
-        executer(() -> { ServiceUtilisateur.supprimer(sel.getId()); return null; }, "Utilisateur supprime.");
+        executer(() -> { Appwrite.supprimerUtilisateur(sel.getId()); return null; }, "Utilisateur supprime.");
     }
 
     private Utilisateur selectionne() {
@@ -123,7 +122,7 @@ public class PanneauUtilisateurs extends JPanel {
     public void rafraichir() {
         new SwingWorker<List<Utilisateur>, Void>() {
             @Override protected List<Utilisateur> doInBackground() throws Exception {
-                return ServiceUtilisateur.listerTout();
+                return Appwrite.listerUtilisateurs();
             }
             @Override protected void done() {
                 try {
