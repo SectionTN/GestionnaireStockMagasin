@@ -118,6 +118,22 @@ public final class ServiceCommande {
         return depuisJson(rep);
     }
 
+    /**
+     * Supprime une commande et restitue la quantite au stock du produit lie.
+     */
+    public static void supprimer(String id) throws AppwriteException {
+        Commande c = obtenirParId(id);
+        if (c == null) {
+            throw new AppwriteException("Commande introuvable.", -1);
+        }
+        Produit p = ServiceProduit.obtenirParId(c.getProduitId());
+        if (p != null) {
+            p.setQuantite(p.getQuantite() + c.getQuantite());
+            ServiceProduit.modifier(p);
+        }
+        ClientAppwrite.supprimerLigne(table(), id);
+    }
+
     private static JsonObject versJson(Commande c) {
         JsonObject o = new JsonObject();
         o.addProperty("produit_id", c.getProduitId());

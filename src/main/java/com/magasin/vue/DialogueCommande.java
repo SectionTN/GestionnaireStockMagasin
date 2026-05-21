@@ -52,7 +52,7 @@ public final class DialogueCommande {
         JTextField champQte = new JTextField(existant == null ? "" : String.valueOf(existant.getQuantite()));
         JTextField champDate = new JTextField(existant == null
                 ? LocalDate.now().format(DateTimeFormatter.ISO_DATE)
-                : existant.getDateCommande());
+                : extraireDateISO(existant.getDateCommande()));
 
         JPanel form = new JPanel(new GridBagLayout());
         form.setBackground(Color.WHITE);
@@ -84,7 +84,8 @@ public final class DialogueCommande {
                 if (p == null) throw new IllegalArgumentException("Selectionnez un produit.");
                 int qte = Integer.parseInt(champQte.getText().trim());
                 if (qte <= 0) throw new IllegalArgumentException("Quantite doit etre > 0.");
-                String date = champDate.getText().trim();
+                String dateBrute = champDate.getText().trim();
+                String date = extraireDateISO(dateBrute);
                 LocalDate.parse(date, DateTimeFormatter.ISO_DATE);
                 Commande c = new Commande(
                         existant == null ? null : existant.getId(),
@@ -102,6 +103,21 @@ public final class DialogueCommande {
 
         d.setVisible(true);
         return ref.get();
+    }
+
+    /**
+     * Extrait la portion yyyy-MM-dd d'une date entree. Accepte :
+     *   "2026-05-21"
+     *   "2026-05-21T00:00:00.000+00:00"
+     *   "2026-05-21T14:30:00Z"
+     */
+    private static String extraireDateISO(String entree) {
+        if (entree == null) return "";
+        String s = entree.trim();
+        if (s.length() >= 10 && s.charAt(4) == '-' && s.charAt(7) == '-') {
+            return s.substring(0, 10);
+        }
+        return s;
     }
 
     private static void ligne(JPanel form, GridBagConstraints g, String label, JComponent c) {

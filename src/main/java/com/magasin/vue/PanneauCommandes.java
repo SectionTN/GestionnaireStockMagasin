@@ -62,13 +62,15 @@ public class PanneauCommandes extends JPanel {
 
         BoutonPrimaire bAj = new BoutonPrimaire("Enregistrer");
         BoutonPrimaire bMo = new BoutonPrimaire("Modifier", new Color(0xF3F4F6), new Color(0x111827));
+        BoutonPrimaire bSu = new BoutonPrimaire("Supprimer", Application.COULEUR_DANGER, Color.WHITE);
         BoutonPrimaire bRa = new BoutonPrimaire("Rafraichir", new Color(0xF3F4F6), new Color(0x111827));
 
         bAj.addActionListener(e -> ajouter());
         bMo.addActionListener(e -> modifier());
+        bSu.addActionListener(e -> supprimer());
         bRa.addActionListener(e -> rafraichir());
 
-        barre.add(bAj); barre.add(bMo); barre.add(bRa);
+        barre.add(bAj); barre.add(bMo); barre.add(bSu); barre.add(bRa);
         JLabel c = new JLabel(); c.setForeground(new Color(0x6B7280)); barre.add(c);
         modele.addTableModelListener(e -> c.setText("  " + modele.getRowCount() + " commande(s)"));
         return barre;
@@ -90,6 +92,16 @@ public class PanneauCommandes extends JPanel {
         if (c == null) return;
         c.setId(cur.getId());
         executer(() -> ControleurCommandes.modifier(c), "Commande modifiee.");
+    }
+
+    private void supprimer() {
+        Commande cur = selectionnee();
+        if (cur == null) { GestionnaireErreurs.erreur(this, "Veuillez selectionner une commande."); return; }
+        String nomProduit = nomParId.getOrDefault(cur.getProduitId(), "(produit inconnu)");
+        if (!GestionnaireErreurs.confirmer(this,
+                "Supprimer cette commande de " + cur.getQuantite() + " x \"" + nomProduit + "\" ?\n"
+                + "Le stock du produit sera restitue.")) return;
+        executer(() -> { ControleurCommandes.supprimer(cur.getId()); return null; }, "Commande supprimee.");
     }
 
     private Commande selectionnee() {
@@ -125,7 +137,8 @@ public class PanneauCommandes extends JPanel {
                     modele.setRowCount(0);
                     for (Commande c : cmds) {
                         String nom = nomParId.getOrDefault(c.getProduitId(), "(produit inconnu)");
-                        modele.addRow(new Object[]{c.getId(), nom, c.getQuantite(), c.getDateCommande()});
+                        modele.addRow(new Object[]{c.getId(), nom, c.getQuantite(),
+                                formaterDate(c.getDateCommande())});
                     }
                 } catch (Exception ex) {
                     GestionnaireErreurs.erreur(PanneauCommandes.this,
@@ -133,6 +146,16 @@ public class PanneauCommandes extends JPanel {
                 }
             }
         }.execute();
+    }
+
+    /** Extrait yyyy-MM-dd d'une date Appwrite (peut etre ISO complet ou deja court). */
+    private static String formaterDate(String date) {
+        if (date == null) return "";
+        String s = date.trim();
+        if (s.length() >= 10 && s.charAt(4) == '-' && s.charAt(7) == '-') {
+            return s.substring(0, 10);
+        }
+        return s;
     }
 
     private interface Act { Object executer() throws Exception; }

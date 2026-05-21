@@ -27,4 +27,8 @@ public final class ControleurCommandes {
     public static Commande modifier(Commande c) throws AppwriteException {
         return ServiceCommande.modifier(c);
     }
+
+    public static void supprimer(String id) throws AppwriteException {
+        ServiceCommande.supprimer(id);
+    }
 }
