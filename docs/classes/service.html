@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Services et Appwrite — Magasin Pro</title>
+  <link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="logo">Magasin Pro</div>
+    <div class="tag">Documentation du projet</div>
+    <nav>
+      <ul>
+        <li><a href="../index.html">Accueil</a></li>
+        <li><a href="../architecture.html">Architecture</a></li>
+        <li><a href="../configuration.html">Configuration et lancement</a></li>
+        <li class="section">Classes</li>
+        <li><a href="modele.html">Modeles (POJO)</a></li>
+        <li><a href="service.html" class="active">Services et Appwrite</a></li>
+        <li><a href="securite.html">Securite</a></li>
+        <li><a href="vue.html">Vues Swing</a></li>
+        <li><a href="controleur.html">Controleurs</a></li>
+        <li><a href="util.html">Utilitaires</a></li>
+        <li class="section">Code commente</li>
+        <li><a href="../code.html">Walkthrough du code</a></li>
+        <li class="section">Examen</li>
+        <li><a href="../faq.html">Questions du prof</a></li>
+      </ul>
+    </nav>
+  </aside>
+
+  <main class="content">
+    <h1>Services et appels Appwrite</h1>
+    <p class="lead">La couche service traduit les operations metier (lister, ajouter, modifier, supprimer) en appels HTTP. Tout passe par <code>ClientAppwrite</code> qui encapsule la signature des requetes.</p>
+
+    <h2>ClientAppwrite</h2>
+    <p>Fichier : <code>src/main/java/com/magasin/service/ClientAppwrite.java</code></p>
+    <p>C'est la classe la plus technique du projet. Elle utilise <code>java.net.http.HttpClient</code> (disponible depuis Java 11) plutot qu'une bibliotheque externe.</p>
+
+    <h3>Champ statique <code>HTTP</code></h3>
+<pre><code>private static final HttpClient HTTP = HttpClient.newBuilder()
+        .connectTimeout(Duration.ofSeconds(15))
+        .build();</code></pre>
+    <p>Un seul client HTTP est cree pour toute l'application. Reutiliser le client permet la mise en cache des connexions et evite d'ouvrir un nouveau socket a chaque requete.</p>
+
+    <h3>Construction d'une requete</h3>
+<pre><code>private static HttpRequest.Builder requeteBase(String chemin) {
+    URI uri = URI.create(Configuration.pointTerminaison() + chemin);
+    return HttpRequest.newBuilder()
+            .uri(uri)
+            .timeout(Duration.ofSeconds(30))
+            .header("X-Appwrite-Project", Configuration.idProjet())
+            .header("X-Appwrite-Key", Configuration.cleApi())
+            .header("Content-Type", "application/json")
+            .header("Accept", "application/json");
+}</code></pre>
+    <p>Toutes les requetes Appwrite portent ces trois en-tetes :</p>
+    <ul>
+      <li><code>X-Appwrite-Project</code> identifie le projet cible.</li>
+      <li><code>X-Appwrite-Key</code> authentifie le client. Notre cle a les scopes <code>tables.*</code> et <code>rows.*</code>.</li>
+      <li><code>Content-Type</code> et <code>Accept</code> annoncent du JSON dans les deux sens.</li>
+    </ul>
+
+    <h3>Lister les lignes d'une table</h3>
+<pre><code>public static JsonArray listerLignes(String tableId, List&lt;String&gt; requetes)
+        throws AppwriteException {
+    StringBuilder url = new StringBuilder(basePourTable(tableId));
+    if (requetes != null &amp;&amp; !requetes.isEmpty()) {
+        url.append("?");
+        for (int i = 0; i &lt; requetes.size(); i++) {
+            if (i &gt; 0) url.append("&amp;");
+            url.append("queries[]=").append(URLEncoder.encode(
+                    requetes.get(i), StandardCharsets.UTF_8));
+        }
+    }
+    HttpRequest req = requeteBase(url.toString()).GET().build();
+    JsonObject rep = envoyer(req);
+    if (rep.has("rows") &amp;&amp; rep.get("rows").isJsonArray())
+        return rep.getAsJsonArray("rows");
+    if (rep.has("documents") &amp;&amp; rep.get("documents").isJsonArray())
+        return rep.getAsJsonArray("documents");
+    return new JsonArray();
+}</code></pre>
+    <p>Points a noter :</p>
+    <ul>
+      <li>Les requetes (filtres) sont passees dans le parametre <code>queries[]</code> en URL-encode pour echapper les guillemets et caracteres speciaux.</li>
+      <li>La reponse contient un tableau <code>rows</code> dans la nouvelle API ; on garde la compatibilite avec <code>documents</code> au cas ou.</li>
+    </ul>
+
+    <h3>Creer, mettre a jour, supprimer</h3>
+<pre><code>public static JsonObject creerLigne(String tableId, JsonObject donnees) {
+    JsonObject corps = new JsonObject();
+    corps.addProperty("rowId", "unique()");   // demande un id auto a Appwrite
+    corps.add("data", donnees);
+    return envoyer(requeteBase(basePourTable(tableId))
+            .POST(BodyPublishers.ofString(corps.toString(), UTF_8))
+            .build());
+}</code></pre>
+
+    <p>La cle <code>rowId</code> vaut <code>"unique()"</code> : Appwrite genere alors un identifiant aleatoire. Le payload reel est niche sous la cle <code>data</code>.</p>
+
+    <h3>Methode <code>envoyer</code> et gestion des erreurs</h3>
+<pre><code>private static JsonObject envoyer(HttpRequest req) throws AppwriteException {
+    try {
+        HttpResponse&lt;String&gt; rep = HTTP.send(req, BodyHandlers.ofString(UTF_8));
+        int code = rep.statusCode();
+        if (code &gt;= 200 &amp;&amp; code &lt; 300) {
+            return JsonParser.parseString(rep.body()).getAsJsonObject();
+        }
+        // Sinon : on extrait le message d'erreur Appwrite
+        String msg = "Erreur HTTP " + code;
+        try {
+            JsonObject err = JsonParser.parseString(rep.body()).getAsJsonObject();
+            if (err.has("message")) msg += " — " + err.get("message").getAsString();
+        } catch (Exception ignore) { }
+        throw new AppwriteException(msg, code);
+    } catch (Exception e) {
+        throw new AppwriteException("Echec reseau : " + e.getMessage(), -1);
+    }
+}</code></pre>
+    <p>Quand Appwrite renvoie un code 4xx ou 5xx, le corps de reponse est en JSON avec une cle <code>message</code>. On extrait ce message pour que la vue affiche une erreur lisible (par exemple "Invalid query syntax").</p>
+
+    <h2>AppwriteException</h2>
+    <p>Fichier : <code>src/main/java/com/magasin/service/AppwriteException.java</code></p>
+<pre><code>public class AppwriteException extends Exception {
+    private final int codeHttp;
+    public AppwriteException(String message, int codeHttp) {
+        super(message);
+        this.codeHttp = codeHttp;
+    }
+    public int getCodeHttp() { return codeHttp; }
+}</code></pre>
+    <p>Une exception verifiee (<code>extends Exception</code>) pour forcer les services et controleurs a la gerer explicitement. Le code HTTP est conserve si on a besoin de distinguer 401 (mauvaise cle) de 404 (ligne introuvable).</p>
+
+    <h2>ServiceProduit</h2>
+    <p>Fichier : <code>src/main/java/com/magasin/service/ServiceProduit.java</code></p>
+    <p>Ce service contient aussi des helpers <code>static</code> reutilises par les autres services : <code>extraireId</code>, <code>optString</code>, <code>optInt</code>, <code>optDouble</code>.</p>
+
+    <h3>Lister tous les produits</h3>
+<pre><code>public static List&lt;Produit&gt; listerTout() throws AppwriteException {
+    JsonArray lignes = ClientAppwrite.listerLignes(table(), Collections.emptyList());
+    List&lt;Produit&gt; resultats = new ArrayList&lt;&gt;();
+    for (JsonElement el : lignes) {
+        resultats.add(depuisJson(el.getAsJsonObject()));
+    }
+    return resultats;
+}</code></pre>
+
+    <h3>Conversion JSON ↔ Produit</h3>
+<pre><code>private static JsonObject versJson(Produit p) {
+    JsonObject o = new JsonObject();
+    o.addProperty("nom", p.getNom());
+    o.addProperty("quantite", p.getQuantite());
+    o.addProperty("prix", p.getPrix());
+    o.addProperty("fournisseur", p.getFournisseur() == null ? "" : p.getFournisseur());
+    return o;
+}
+
+private static Produit depuisJson(JsonObject o) {
+    Produit p = new Produit();
+    p.setId(extraireId(o));
+    p.setNom(optString(o, "nom"));
+    p.setQuantite(optInt(o, "quantite"));
+    p.setPrix(optDouble(o, "prix"));
+    p.setFournisseur(optString(o, "fournisseur"));
+    return p;
+}</code></pre>
+
+    <p>Helpers utilises :</p>
+<pre><code>static String optString(JsonObject o, String k) {
+    return o.has(k) &amp;&amp; !o.get(k).isJsonNull() ? o.get(k).getAsString() : "";
+}
+static int optInt(JsonObject o, String k) {
+    return o.has(k) &amp;&amp; !o.get(k).isJsonNull() ? o.get(k).getAsInt() : 0;
+}
+static String extraireId(JsonObject o) {
+    if (o.has("$id")) return o.get("$id").getAsString();
+    if (o.has("id"))  return o.get("id").getAsString();
+    return null;
+}</code></pre>
+    <p>L'identifiant de la ligne est sous la cle <code>$id</code> (le <code>$</code> indique un champ systeme dans Appwrite). On cherche <code>id</code> en secours, au cas ou.</p>
+
+    <h2>ServiceFournisseur</h2>
+    <p>Memes operations que ServiceProduit, sans <code>quantite</code> ni <code>prix</code>. Rien d'inattendu.</p>
+
+    <h2>ServiceCommande</h2>
+    <p>C'est le service le plus interessant. L'enregistrement et la modification d'une commande doivent verifier le stock disponible.</p>
+
+    <h3>Enregistrer une commande</h3>
+<pre><code>public static Commande ajouter(Commande c) throws AppwriteException {
+    Produit p = ServiceProduit.obtenirParId(c.getProduitId());
+    if (p == null) {
+        throw new AppwriteException("Produit introuvable.", -1);
+    }
+    if (c.getQuantite() &gt; p.getQuantite()) {
+        throw new AppwriteException(
+            "Stock insuffisant pour \"" + p.getNom() + "\". "
+            + "Disponible : " + p.getQuantite()
+            + ", demande : " + c.getQuantite() + ".", -1);
+    }
+    p.setQuantite(p.getQuantite() - c.getQuantite());
+    ServiceProduit.modifier(p);                       // on debite le stock
+
+    JsonObject rep = ClientAppwrite.creerLigne(table(), versJson(c));
+    return depuisJson(rep);
+}</code></pre>
+    <p>L'ordre des operations compte. On verifie le stock avant tout. Si on debitait sans verifier, on aurait des stocks negatifs. On modifie le produit avant de creer la commande pour que, si l'ecriture du produit echoue, on n'ait pas une commande orpheline qui pointe vers un stock incorrect.</p>
+
+    <h3>Modifier une commande</h3>
+<pre><code>public static Commande modifier(Commande nouvelle) throws AppwriteException {
+    Commande ancienne = obtenirParId(nouvelle.getId());
+
+    if (ancienne.getProduitId().equals(nouvelle.getProduitId())) {
+        // Meme produit : on applique juste la difference au stock
+        int delta = nouvelle.getQuantite() - ancienne.getQuantite();
+        if (delta != 0) {
+            Produit p = ServiceProduit.obtenirParId(nouvelle.getProduitId());
+            if (delta &gt; 0 &amp;&amp; p.getQuantite() &lt; delta) {
+                throw new AppwriteException("Stock insuffisant...", -1);
+            }
+            p.setQuantite(p.getQuantite() - delta);
+            ServiceProduit.modifier(p);
+        }
+    } else {
+        // Produit different : on rembourse l'ancien produit, on debite le nouveau
+        Produit ancien  = ServiceProduit.obtenirParId(ancienne.getProduitId());
+        Produit nouveau = ServiceProduit.obtenirParId(nouvelle.getProduitId());
+
+        if (nouveau.getQuantite() &lt; nouvelle.getQuantite()) {
+            throw new AppwriteException("Stock insuffisant...", -1);
+        }
+        ancien.setQuantite(ancien.getQuantite() + ancienne.getQuantite());
+        ServiceProduit.modifier(ancien);
+        nouveau.setQuantite(nouveau.getQuantite() - nouvelle.getQuantite());
+        ServiceProduit.modifier(nouveau);
+    }
+    JsonObject rep = ClientAppwrite.mettreAJourLigne(table(), nouvelle.getId(), versJson(nouvelle));
+    return depuisJson(rep);
+}</code></pre>
+
+    <p>Deux cas a distinguer :</p>
+    <ul>
+      <li>Le client change juste la quantite. On calcule la difference (positive ou negative) et on l'applique au stock.</li>
+      <li>Le client change carrement de produit. On rembourse l'ancien produit (ajout) puis on debite le nouveau (soustraction). Si le nouveau n'a pas assez de stock, on echoue avant de toucher quoi que ce soit.</li>
+    </ul>
+
+    <div class="card warn">
+      <strong>Limite connue :</strong> il n'y a pas de transaction reelle. Si l'ecriture de la commande echoue apres avoir debite le produit, le stock reste decremente. Une vraie application utiliserait une fonction serveur Appwrite (ou une transaction SQL si on etait en MySQL). Pour un projet d'examen, l'approche reste acceptable.
+    </div>
+
+    <h2>ServiceUtilisateur</h2>
+    <p>Trois operations specifiques : recherche par nom d'utilisateur, authentification, et l'ajout / modification avec hachage du mot de passe.</p>
+
+<pre><code>public static Utilisateur trouverParUsername(String username) throws AppwriteException {
+    // Filtre cote client : la base contient peu d'utilisateurs.
+    // On evite ainsi un piege de syntaxe sur les filtres TablesDB.
+    for (Utilisateur u : listerTout()) {
+        if (u.getUsername() != null &amp;&amp; u.getUsername().equalsIgnoreCase(username)) {
+            return u;
+        }
+    }
+    return null;
+}
+
+public static Utilisateur authentifier(String username, String motDePasseClair)
+        throws AppwriteException {
+    Utilisateur u = trouverParUsername(username);
+    if (u == null) return null;
+    if (!GestionnaireMotDePasse.verifier(motDePasseClair, u.getPassword())) return null;
+    return u;
+}</code></pre>
+
+    <p>L'authentification renvoie l'utilisateur si tout est bon, <code>null</code> sinon. La vue distingue les deux cas pour afficher "Identifiants incorrects".</p>
+
+    <p>Pour la creation / mise a jour d'un utilisateur :</p>
+<pre><code>public static Utilisateur ajouter(String username, String motDePasseClair, String role) {
+    JsonObject d = new JsonObject();
+    d.addProperty("username", username);
+    d.addProperty("password", GestionnaireMotDePasse.hacher(motDePasseClair));  // BCrypt
+    d.addProperty("role", role);
+    return depuisJson(ClientAppwrite.creerLigne(table(), d));
+}</code></pre>
+    <p>Le mot de passe en clair ne quitte jamais la machine du client : on le passe a BCrypt avant de l'envoyer dans le JSON.</p>
+
+    <footer class="page-footer">
+      <div class="authors">Mohamed Rayen Sbai &middot; Ranim Belguith</div>
+      <div>Services &mdash; Magasin Pro</div>
+    </footer>
+  </main>
+</div>
+</body>
+</html>

@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Configuration et lancement — Magasin Pro</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="logo">Magasin Pro</div>
+    <div class="tag">Documentation du projet</div>
+    <nav>
+      <ul>
+        <li><a href="index.html">Accueil</a></li>
+        <li><a href="architecture.html">Architecture</a></li>
+        <li><a href="configuration.html" class="active">Configuration et lancement</a></li>
+        <li class="section">Classes</li>
+        <li><a href="classes/modele.html">Modeles (POJO)</a></li>
+        <li><a href="classes/service.html">Services et Appwrite</a></li>
+        <li><a href="classes/securite.html">Securite</a></li>
+        <li><a href="classes/vue.html">Vues Swing</a></li>
+        <li><a href="classes/controleur.html">Controleurs</a></li>
+        <li><a href="classes/util.html">Utilitaires</a></li>
+        <li class="section">Code commente</li>
+        <li><a href="code.html">Walkthrough du code</a></li>
+        <li class="section">Examen</li>
+        <li><a href="faq.html">Questions du prof</a></li>
+      </ul>
+    </nav>
+  </aside>
+
+  <main class="content">
+    <h1>Configuration et lancement</h1>
+    <p class="lead">Pour faire tourner l'application, il faut un projet Appwrite Cloud, Maven et Java 17.</p>
+
+    <h2>1. Prerequis logiciels</h2>
+    <ul>
+      <li>JDK 17 ou plus recent</li>
+      <li>Maven 3.9 ou plus recent</li>
+      <li>Un compte sur <a href="https://cloud.appwrite.io" target="_blank">cloud.appwrite.io</a></li>
+    </ul>
+
+    <h2>2. Creer le projet Appwrite</h2>
+    <ol>
+      <li>Se connecter a Appwrite Cloud puis cliquer sur <span class="kbd">Create project</span>.</li>
+      <li>Donner un nom (par exemple "Magasin"). Noter le <strong>Project ID</strong> affiche sur la page d'accueil du projet.</li>
+      <li>Dans <span class="kbd">Settings &rarr; API keys</span>, creer une cle. Cocher les scopes : <code>tables.read</code>, <code>tables.write</code>, <code>rows.read</code>, <code>rows.write</code>. Copier la cle immediatement (Appwrite ne la montre qu'une fois).</li>
+    </ol>
+
+    <h2>3. Creer la base et les tables</h2>
+    <ol>
+      <li>Aller dans <span class="kbd">Databases</span> puis creer une base nommee <code>magasin_db</code>. Noter le <strong>Database ID</strong>.</li>
+      <li>Dans cette base, creer quatre tables avec les colonnes ci-dessous. Verifier que les noms de colonnes correspondent <strong>exactement</strong> a ceux du code (sensible a la casse).</li>
+    </ol>
+
+    <h3>Table <code>produit</code></h3>
+    <table>
+      <thead><tr><th>Colonne</th><th>Type</th><th>Taille</th><th>Requis</th></tr></thead>
+      <tbody>
+        <tr><td>nom</td><td>String</td><td>255</td><td>oui</td></tr>
+        <tr><td>quantite</td><td>Integer</td><td>—</td><td>oui</td></tr>
+        <tr><td>prix</td><td>Double</td><td>—</td><td>oui</td></tr>
+        <tr><td>fournisseur</td><td>String</td><td>255</td><td>non</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Table <code>fournisseur</code></h3>
+    <table>
+      <thead><tr><th>Colonne</th><th>Type</th><th>Taille</th><th>Requis</th></tr></thead>
+      <tbody>
+        <tr><td>nom</td><td>String</td><td>255</td><td>oui</td></tr>
+        <tr><td>contact</td><td>String</td><td>255</td><td>non</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Table <code>commande</code></h3>
+    <table>
+      <thead><tr><th>Colonne</th><th>Type</th><th>Taille</th><th>Requis</th></tr></thead>
+      <tbody>
+        <tr><td>produit_id</td><td>String</td><td>36</td><td>oui</td></tr>
+        <tr><td>quantite</td><td>Integer</td><td>—</td><td>oui</td></tr>
+        <tr><td>date_commande</td><td>String</td><td>32</td><td>oui</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Table <code>utilisateur</code></h3>
+    <table>
+      <thead><tr><th>Colonne</th><th>Type</th><th>Taille</th><th>Requis</th></tr></thead>
+      <tbody>
+        <tr><td>username</td><td>String</td><td>64</td><td>oui</td></tr>
+        <tr><td>password</td><td>String</td><td>255</td><td>oui</td></tr>
+        <tr><td>role</td><td>Enum</td><td>—</td><td>oui</td></tr>
+      </tbody>
+    </table>
+    <p>Pour la colonne <code>role</code>, ajouter les valeurs autorisees : <code>administrateur</code> et <code>gestionnaire</code>.</p>
+
+    <h2>4. Fichier de configuration local</h2>
+    <p>Renseigner <code>src/main/resources/config.properties</code> avec les informations recuperees :</p>
+<pre><code># Configuration Appwrite Cloud
+APPWRITE_ENDPOINT=https://fra.cloud.appwrite.io/v1
+APPWRITE_PROJECT_ID=ton_project_id
+APPWRITE_API_KEY=ta_cle_api
+APPWRITE_DATABASE_ID=ton_database_id
+
+TABLE_PRODUIT=produit
+TABLE_FOURNISSEUR=fournisseur
+TABLE_COMMANDE=commande
+TABLE_UTILISATEUR=utilisateur</code></pre>
+
+    <div class="card warn">
+      <strong>Attention :</strong> ne pas committer la cle API dans Git. Le fichier est ignore via <code>.gitignore</code>.
+    </div>
+
+    <h2>5. Creer le premier administrateur</h2>
+    <p>Generer un hash BCrypt pour le mot de passe choisi :</p>
+<pre><code>mvn -q compile exec:java \
+  -Dexec.mainClass=com.magasin.outils.GenererHashAdmin \
+  -Dexec.args="motDePasseAdmin"</code></pre>
+
+    <p>La commande affiche une chaine du genre <code>$2a$12$xxxx...</code>. Copier ce hash, puis dans la console Appwrite :</p>
+    <ol>
+      <li>Ouvrir la table <code>utilisateur</code>.</li>
+      <li>Cliquer sur <span class="kbd">Create row</span>.</li>
+      <li>Remplir : <code>username = admin</code>, <code>password = $2a$12$xxxx...</code>, <code>role = administrateur</code>.</li>
+    </ol>
+
+    <h2>6. Compiler et lancer</h2>
+<pre><code>mvn clean package
+java -jar target/gestionnaire-stock-magasin.jar</code></pre>
+
+    <p>Ou en mode developpement, sans empaqueter :</p>
+<pre><code>mvn compile exec:java</code></pre>
+
+    <h2>7. Reglages HiDPI (ecran haute densite)</h2>
+    <p>Par defaut l'app force une mise a l'echelle 2x sur Linux. Pour ajuster :</p>
+<pre><code>MAGASIN_UI_SCALE=1.5 java -jar target/gestionnaire-stock-magasin.jar
+# ou
+java -Dsun.java2d.uiScale=1.0 -jar target/gestionnaire-stock-magasin.jar</code></pre>
+
+    <footer class="page-footer">
+      <div class="authors">Mohamed Rayen Sbai &middot; Ranim Belguith</div>
+      <div>Configuration &mdash; Magasin Pro</div>
+    </footer>
+  </main>
+</div>
+</body>
+</html>

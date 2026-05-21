@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Vues Swing — Magasin Pro</title>
+  <link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="logo">Magasin Pro</div>
+    <div class="tag">Documentation du projet</div>
+    <nav>
+      <ul>
+        <li><a href="../index.html">Accueil</a></li>
+        <li><a href="../architecture.html">Architecture</a></li>
+        <li><a href="../configuration.html">Configuration et lancement</a></li>
+        <li class="section">Classes</li>
+        <li><a href="modele.html">Modeles (POJO)</a></li>
+        <li><a href="service.html">Services et Appwrite</a></li>
+        <li><a href="securite.html">Securite</a></li>
+        <li><a href="vue.html" class="active">Vues Swing</a></li>
+        <li><a href="controleur.html">Controleurs</a></li>
+        <li><a href="util.html">Utilitaires</a></li>
+        <li class="section">Code commente</li>
+        <li><a href="../code.html">Walkthrough du code</a></li>
+        <li class="section">Examen</li>
+        <li><a href="../faq.html">Questions du prof</a></li>
+      </ul>
+    </nav>
+  </aside>
+
+  <main class="content">
+    <h1>Vues Swing</h1>
+    <p class="lead">L'interface utilise Swing avec le look FlatLaf. Les fenetres principales sont la connexion et le tableau de bord. Chaque module a son propre panneau et son propre dialogue de saisie.</p>
+
+    <h2>Application (point d'entree)</h2>
+    <p>Fichier : <code>src/main/java/com/magasin/Application.java</code></p>
+<pre><code>public static void main(String[] args) {
+    // Mise a l'echelle pour ecrans haute densite
+    System.setProperty("sun.java2d.uiScale.enabled", "true");
+    if (System.getProperty("sun.java2d.uiScale") == null) {
+        System.setProperty("sun.java2d.uiScale",
+            String.valueOf(detecterEchelle()));
+    }
+    // Anti-aliasing pour les polices
+    System.setProperty("awt.useSystemAAFontSettings", "on");
+    System.setProperty("swing.aatext", "true");
+
+    // Nom de l'application au niveau du serveur de fenetres
+    try {
+        Toolkit tk = Toolkit.getDefaultToolkit();
+        Field f = tk.getClass().getDeclaredField("awtAppClassName");
+        f.setAccessible(true);
+        f.set(tk, "MagasinPro");
+    } catch (Exception ignore) {}
+
+    SwingUtilities.invokeLater(() -> {
+        initialiserApparence();        // FlatLaf
+        Configuration.charger();        // config.properties
+        new FenetreConnexion().setVisible(true);
+    });
+}</code></pre>
+
+    <p>Deroulement :</p>
+    <ol>
+      <li>On positionne les proprietes systeme <em>avant</em> d'instancier le moindre composant AWT. Sinon, elles seraient ignorees.</li>
+      <li>On essaie de definir <code>awtAppClassName</code> a "MagasinPro". Ca donne un nom propre dans la barre des taches.</li>
+      <li>On bascule sur l'EDT via <code>SwingUtilities.invokeLater</code> pour creer la premiere fenetre. Toute creation de composant Swing doit se faire sur ce thread.</li>
+    </ol>
+
+    <h3>Initialisation de l'apparence</h3>
+<pre><code>private static void initialiserApparence() throws Exception {
+    UIManager.put("Button.arc", 12);            // boutons arrondis
+    UIManager.put("Component.arc", 10);
+    UIManager.put("TextComponent.arc", 10);     // champs texte arrondis
+    UIManager.put("Component.accentColor", COULEUR_ACCENT);
+    UIManager.put("Table.rowHeight", 32);
+    UIManager.put("Table.showHorizontalLines", true);
+    UIManager.put("defaultFont", new Font("Segoe UI", Font.PLAIN, 13));
+    FlatIntelliJLaf.setup();
+}</code></pre>
+    <p>FlatLaf accepte beaucoup de proprietes <code>UIManager</code> qui changent les coins, les marges et les couleurs sans avoir a deriver les composants. Les constantes <code>COULEUR_ACCENT</code>, <code>COULEUR_SUCCES</code> et autres sont definies en haut du fichier.</p>
+
+    <h2>FenetreConnexion</h2>
+    <p>Fichier : <code>src/main/java/com/magasin/vue/FenetreConnexion.java</code></p>
+    <p>Une JFrame divisee en deux : un panneau a gauche avec un degrade et un titre, un panneau a droite avec le formulaire de connexion.</p>
+
+<pre><code>public FenetreConnexion() {
+    super("Gestionnaire de Stock — Connexion");
+    setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+    // Taille adaptative : 75% de l'ecran, plafonnee
+    Dimension ecran = Toolkit.getDefaultToolkit().getScreenSize();
+    int l = Math.min(960, (int) (ecran.width  * 0.75));
+    int h = Math.min(620, (int) (ecran.height * 0.80));
+    setSize(l, h);
+    setMinimumSize(new Dimension(Math.min(700, l), Math.min(500, h)));
+    setLocationRelativeTo(null);
+    construire();
+}</code></pre>
+    <p>On limite la taille au minimum entre une valeur fixe (960&times;620) et un pourcentage de l'ecran. Sur un petit ecran l'app reste utilisable. Sur grand ecran on ne s'etale pas au-dela du raisonnable.</p>
+
+    <h3>Le panneau gauche (degrade)</h3>
+<pre><code>PanneauGradient pg = new PanneauGradient(
+        new Color(0x2D6CDF), new Color(0x6A4DF2));
+pg.setLayout(new BoxLayout(pg, BoxLayout.Y_AXIS));
+pg.setBorder(BorderFactory.createEmptyBorder(48, 40, 48, 40));
+
+JLabel titre = new JLabel("Magasin Pro");
+titre.setFont(new Font("Segoe UI", Font.BOLD, 28));
+titre.setForeground(Color.WHITE);</code></pre>
+    <p><code>PanneauGradient</code> est notre composant maison. Il etend <code>JPanel</code> et redefinit <code>paintComponent</code> pour dessiner un degrade lineaire entre deux couleurs.</p>
+
+    <h3>Le panneau droit (formulaire)</h3>
+<pre><code>champUsername.putClientProperty("JTextField.placeholderText", "ex. admin");
+champMotDePasse.putClientProperty("JTextField.placeholderText", "••••••••");
+
+BoutonPrimaire bouton = new BoutonPrimaire("Se connecter");
+bouton.addActionListener(e -> tenterConnexion());
+champMotDePasse.addActionListener(e -> tenterConnexion());   // Entree clavier valide</code></pre>
+    <p><code>JTextField.placeholderText</code> est une propriete FlatLaf : un texte d'indication grise s'affiche quand le champ est vide.</p>
+
+    <h3>tenterConnexion</h3>
+<pre><code>private void tenterConnexion() {
+    String u = champUsername.getText().trim();
+    String p = new String(champMotDePasse.getPassword());
+    etiquetteMessage.setText(" ");
+    ControleurConnexion.connecter(this, u, p, message -> {
+        etiquetteMessage.setText(message);
+        etiquetteMessage.setForeground(Application.COULEUR_DANGER);
+    });
+}</code></pre>
+    <p>On delegue au controleur. Le quatrieme parametre est un <code>Consumer&lt;String&gt;</code> que le controleur appelle en cas d'erreur (saisie invalide, identifiants incorrects, erreur reseau). La vue ne sait pas <em>pourquoi</em> c'est echoue, elle se contente d'afficher le message.</p>
+
+    <h2>FenetrePrincipale</h2>
+    <p>Fichier : <code>src/main/java/com/magasin/vue/FenetrePrincipale.java</code></p>
+    <p>Une JFrame avec une barre laterale sombre a gauche et une zone de contenu a droite. Le contenu utilise <code>CardLayout</code> pour basculer entre les panneaux.</p>
+
+<pre><code>private final CardLayout dispositionCartes = new CardLayout();
+private final JPanel zoneContenu = new JPanel(dispositionCartes);
+
+zoneContenu.add(new PanneauProduits(),     CLE_PRODUITS);
+zoneContenu.add(new PanneauFournisseurs(), CLE_FOURNISSEURS);
+zoneContenu.add(new PanneauCommandes(),    CLE_COMMANDES);
+if (SessionUtilisateur.estAdministrateur()) {
+    zoneContenu.add(new PanneauUtilisateurs(), CLE_UTILISATEURS);
+}</code></pre>
+
+    <p>Le test <code>estAdministrateur()</code> conditionne l'ajout du panneau Utilisateurs. Un gestionnaire de stock ne voit jamais ce panneau, meme s'il essaie de tricher : il n'existe simplement pas dans son interface.</p>
+
+    <h3>Barre laterale</h3>
+<pre><code>JToggleButton b = new JToggleButton(texte);
+b.setHorizontalAlignment(SwingConstants.LEFT);
+b.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
+b.addItemListener(e -&gt; {
+    if (b.isSelected()) {
+        b.setBackground(new Color(0x334155));
+        b.setForeground(Color.WHITE);
+        afficherCarte(cle);
+    } else {
+        b.setForeground(new Color(0xCBD5E1));
+    }
+});
+groupe.add(b);          // ButtonGroup pour la mutuelle exclusion</code></pre>
+    <p>On utilise <code>JToggleButton</code> dans un <code>ButtonGroup</code> : un seul bouton est selectionne a la fois, comme des onglets. Quand l'utilisateur clique, l'<code>ItemListener</code> bascule la couleur et appelle <code>afficherCarte</code>.</p>
+
+    <h3>Pied de la barre : info utilisateur et deconnexion</h3>
+<pre><code>JButton deconnexion = new JButton("Se deconnecter");
+deconnexion.addActionListener(e -&gt; seDeconnecter());
+
+private void seDeconnecter() {
+    SessionUtilisateur.deconnecter();
+    dispose();
+    new FenetreConnexion().setVisible(true);
+}</code></pre>
+    <p>La deconnexion vide la session puis ferme la fenetre actuelle (<code>dispose()</code>) et ouvre une nouvelle fenetre de connexion.</p>
+
+    <h2>Panneaux CRUD</h2>
+    <p>Les quatre panneaux suivent la meme structure :</p>
+    <ol>
+      <li>Un en-tete avec un titre et une description (<code>EnTetePanneau</code>).</li>
+      <li>Une barre d'actions (boutons Ajouter / Modifier / Supprimer / Rafraichir).</li>
+      <li>Une <code>JTable</code> stylisee qui affiche les donnees.</li>
+    </ol>
+
+    <h3>PanneauProduits</h3>
+<pre><code>private final DefaultTableModel modele = new DefaultTableModel(
+        new Object[]{"ID", "Nom", "Quantite", "Prix", "Fournisseur"}, 0) {
+    @Override public boolean isCellEditable(int r, int c) { return false; }
+};
+private final JTable tableau = new TableurStylise(modele);</code></pre>
+    <p>On surcharge <code>isCellEditable</code> pour rendre le tableau en lecture seule. La modification passe par le dialogue, pas par la cellule.</p>
+
+    <h3>Action "Ajouter"</h3>
+<pre><code>private void ajouter() {
+    Produit p = DialogueProduit.afficher(this, null);   // null = creation
+    if (p == null) return;                              // l'utilisateur a annule
+    executerService(() -&gt; ControleurProduits.ajouter(p), "Produit ajoute.");
+}</code></pre>
+
+    <p><code>DialogueProduit.afficher</code> retourne <code>null</code> si l'utilisateur a clique sur Annuler ou ferme la fenetre. Sinon il retourne un nouveau <code>Produit</code> rempli.</p>
+
+    <h3>Action "Modifier"</h3>
+<pre><code>private void modifier() {
+    Produit p = produitSelectionne();
+    if (p == null) {
+        GestionnaireErreurs.erreur(this, "Veuillez selectionner un produit.");
+        return;
+    }
+    Produit modifie = DialogueProduit.afficher(this, p);   // passe l'existant
+    if (modifie == null) return;
+    modifie.setId(p.getId());                              // on conserve l'id
+    executerService(() -&gt; ControleurProduits.modifier(modifie), "Produit modifie.");
+}</code></pre>
+    <p>On verifie qu'une ligne est selectionnee, on ouvre le dialogue prerempli, puis on remet l'id avant d'appeler le service (le dialogue ne le manipule pas).</p>
+
+    <h3>Helper <code>executerService</code></h3>
+<pre><code>private void executerService(Action action, String messageSucces) {
+    new SwingWorker&lt;Object, Void&gt;() {
+        protected Object doInBackground() throws Exception {
+            return action.executer();
+        }
+        protected void done() {
+            try {
+                get();                      // releve l'exception eventuelle
+                rafraichir();
+                GestionnaireErreurs.information(this, messageSucces);
+            } catch (Exception ex) {
+                GestionnaireErreurs.erreur(this, "Operation echouee", ex.getCause());
+            }
+        }
+    }.execute();
+}</code></pre>
+    <p>Le meme schema est repete dans les quatre panneaux : SwingWorker, refresh apres succes, dialogue d'erreur sinon.</p>
+
+    <h3>PanneauCommandes : combo des produits</h3>
+    <p>Pour enregistrer une commande, l'utilisateur choisit un produit dans un combo. Le panneau garde un cache des produits :</p>
+<pre><code>private List&lt;Produit&gt; produitsCache = List.of();
+private final Map&lt;String, String&gt; nomParId = new HashMap&lt;&gt;();
+
+public void rafraichir() {
+    new SwingWorker&lt;Object[], Void&gt;() {
+        protected Object[] doInBackground() throws Exception {
+            List&lt;Produit&gt; prods = ControleurCommandes.listerProduits();
+            List&lt;Commande&gt; cmds = ControleurCommandes.listerTout();
+            return new Object[]{prods, cmds};
+        }
+        protected void done() {
+            Object[] res = get();
+            produitsCache = (List&lt;Produit&gt;) res[0];
+            // Mappe id -&gt; nom pour afficher le nom dans le tableau
+            nomParId.clear();
+            for (Produit p : produitsCache) nomParId.put(p.getId(), p.getNom());
+            // ... remplit le modele
+        }
+    }.execute();
+}</code></pre>
+    <p>On charge produits et commandes en parallele dans le meme worker. La map <code>nomParId</code> sert a afficher le nom du produit dans le tableau au lieu de son identifiant cryptique.</p>
+
+    <h2>Dialogues de saisie</h2>
+    <p>Chaque module a son dialogue. Tous suivent le meme schema :</p>
+    <ul>
+      <li>Une methode statique <code>afficher(parent, existant)</code> qui ouvre une <code>JDialog</code> modale.</li>
+      <li>Un panneau de formulaire avec <code>GridBagLayout</code>.</li>
+      <li>Une barre d'actions avec deux boutons : Annuler et Valider.</li>
+      <li>Une <code>AtomicReference</code> qui contient le resultat pour le retour de methode.</li>
+    </ul>
+
+<pre><code>final AtomicReference&lt;Produit&gt; resultat = new AtomicReference&lt;&gt;();
+valider.addActionListener(e -&gt; {
+    try {
+        String nom = champNom.getText().trim();
+        if (nom.isEmpty()) throw new IllegalArgumentException("Le nom est obligatoire.");
+        int qte = Integer.parseInt(champQte.getText().trim());
+        if (qte &lt; 0) throw new IllegalArgumentException("La quantite doit etre positive.");
+        // ...
+        resultat.set(new Produit(idExistant, nom, qte, prix, fournisseur));
+        dialogue.dispose();
+    } catch (NumberFormatException nfe) {
+        GestionnaireErreurs.erreur(dialogue, "Quantite ou prix invalide.");
+    } catch (IllegalArgumentException iae) {
+        GestionnaireErreurs.erreur(dialogue, iae.getMessage());
+    }
+});
+
+dialogue.setVisible(true);   // bloque jusqu'a la fermeture (modal)
+return resultat.get();</code></pre>
+
+    <p>Le <code>setVisible(true)</code> sur une dialog modale bloque l'EDT jusqu'a ce que la dialog soit fermee. Au retour, on lit la valeur stockee dans l'<code>AtomicReference</code>.</p>
+
+    <h2>Composants reutilisables</h2>
+
+    <h3>BoutonPrimaire</h3>
+<pre><code>public class BoutonPrimaire extends JButton {
+    public BoutonPrimaire(String texte) {
+        super(texte);
+        setFocusPainted(false);
+        setBorderPainted(false);
+        setBackground(Application.COULEUR_ACCENT);
+        setForeground(Color.WHITE);
+        setFont(getFont().deriveFont(Font.BOLD, 13f));
+        setBorder(new EmptyBorder(10, 22, 10, 22));
+        setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        putClientProperty("JButton.buttonType", "roundRect");
+    }
+}</code></pre>
+    <p>Un bouton stylise pour les actions principales. <code>JButton.buttonType=roundRect</code> est une propriete FlatLaf qui donne des coins arrondis.</p>
+
+    <h3>PanneauGradient</h3>
+<pre><code>protected void paintComponent(Graphics g) {
+    Graphics2D g2 = (Graphics2D) g.create();
+    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
+                        RenderingHints.VALUE_ANTIALIAS_ON);
+    GradientPaint gp = new GradientPaint(0, 0, couleurDebut,
+                                          getWidth(), getHeight(), couleurFin);
+    g2.setPaint(gp);
+    g2.fillRect(0, 0, getWidth(), getHeight());
+    g2.dispose();
+    super.paintComponent(g);
+}</code></pre>
+    <p>On surcharge <code>paintComponent</code> pour dessiner le degrade en arriere-plan. Le panneau reste opaque et accepte des enfants Swing normaux par-dessus.</p>
+
+    <h3>PanneauCarte</h3>
+    <p>Un panneau avec coins arrondis et une legere ombre, utilise pour la "carte" centrale de l'ecran de connexion. Memes principes que <code>PanneauGradient</code> : on dessine le fond a la main avant <code>super.paintComponent</code>.</p>
+
+    <h3>TableurStylise</h3>
+<pre><code>public class TableurStylise extends JTable {
+    public TableurStylise(TableModel modele) {
+        super(modele);
+        setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        setRowHeight(34);
+        setShowGrid(false);
+        setFillsViewportHeight(true);
+        setDefaultRenderer(Object.class, new RenduAlterne());
+    }
+    private static class RenduAlterne extends DefaultTableCellRenderer {
+        public Component getTableCellRendererComponent(...) {
+            // Couleur alternee : blanc / gris clair
+            if (isSelected) c.setBackground(new Color(0xE0E7FF));
+            else c.setBackground(row % 2 == 0 ? Color.WHITE : new Color(0xF9FAFB));
+            return c;
+        }
+    }
+}</code></pre>
+    <p>Un tableau qui alterne les couleurs de ligne pour faciliter la lecture, sans bordures intercellulaires. Le rendu de selection utilise une teinte bleue claire.</p>
+
+    <footer class="page-footer">
+      <div class="authors">Mohamed Rayen Sbai &middot; Ranim Belguith</div>
+      <div>Vues &mdash; Magasin Pro</div>
+    </footer>
+  </main>
+</div>
+</body>
+</html>

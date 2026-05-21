@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Controleurs — Magasin Pro</title>
+  <link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="logo">Magasin Pro</div>
+    <div class="tag">Documentation du projet</div>
+    <nav>
+      <ul>
+        <li><a href="../index.html">Accueil</a></li>
+        <li><a href="../architecture.html">Architecture</a></li>
+        <li><a href="../configuration.html">Configuration et lancement</a></li>
+        <li class="section">Classes</li>
+        <li><a href="modele.html">Modeles (POJO)</a></li>
+        <li><a href="service.html">Services et Appwrite</a></li>
+        <li><a href="securite.html">Securite</a></li>
+        <li><a href="vue.html">Vues Swing</a></li>
+        <li><a href="controleur.html" class="active">Controleurs</a></li>
+        <li><a href="util.html">Utilitaires</a></li>
+        <li class="section">Code commente</li>
+        <li><a href="../code.html">Walkthrough du code</a></li>
+        <li class="section">Examen</li>
+        <li><a href="../faq.html">Questions du prof</a></li>
+      </ul>
+    </nav>
+  </aside>
+
+  <main class="content">
+    <h1>Controleurs</h1>
+    <p class="lead">Les controleurs sont des intermediaires fins entre les vues et les services. Pour la plupart, ils delegent directement. Le controleur de connexion fait un peu plus.</p>
+
+    <h2>ControleurConnexion</h2>
+    <p>Fichier : <code>src/main/java/com/magasin/controleur/ControleurConnexion.java</code></p>
+<pre><code>public static void connecter(FenetreConnexion fenetre,
+                              String username,
+                              String motDePasse,
+                              Consumer&lt;String&gt; auxErreurs) {
+    if (username == null || username.isBlank()) {
+        auxErreurs.accept("Veuillez saisir un nom d'utilisateur.");
+        return;
+    }
+    if (motDePasse == null || motDePasse.isEmpty()) {
+        auxErreurs.accept("Veuillez saisir un mot de passe.");
+        return;
+    }
+
+    new SwingWorker&lt;Utilisateur, Void&gt;() {
+        protected Utilisateur doInBackground() throws Exception {
+            return ServiceUtilisateur.authentifier(username, motDePasse);
+        }
+        protected void done() {
+            try {
+                Utilisateur u = get();
+                if (u == null) {
+                    auxErreurs.accept("Identifiants incorrects.");
+                    return;
+                }
+                SessionUtilisateur.connecter(u);
+                SwingUtilities.invokeLater(() -&gt; {
+                    fenetre.dispose();
+                    new FenetrePrincipale().setVisible(true);
+                });
+            } catch (Exception ex) {
+                Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
+                auxErreurs.accept("Echec : " + cause.getMessage());
+            }
+        }
+    }.execute();
+}</code></pre>
+
+    <h3>Logique pas a pas</h3>
+    <ol>
+      <li><strong>Validation cote client</strong> : on refuse les champs vides avant tout appel reseau.</li>
+      <li><strong>Appel asynchrone</strong> : <code>SwingWorker</code> execute <code>authentifier</code> sur un thread de fond. Pendant ce temps, l'interface reste reactive.</li>
+      <li><strong>Resultat</strong> : trois cas possibles dans <code>done()</code> :
+        <ul>
+          <li><code>u == null</code> : pas d'utilisateur trouve ou mot de passe faux. On appelle <code>auxErreurs</code> avec "Identifiants incorrects".</li>
+          <li><code>u != null</code> : succes. On stocke dans la session, on ferme l'ecran de connexion et on ouvre le tableau de bord.</li>
+          <li>Exception : probleme reseau ou Appwrite. On extrait la cause et on l'affiche.</li>
+        </ul>
+      </li>
+    </ol>
+
+    <h3>Pourquoi un <code>Consumer&lt;String&gt;</code> pour les erreurs ?</h3>
+    <p>Le controleur ne sait rien des composants Swing. Il ne peut pas appeler directement <code>etiquetteMessage.setText</code>. La vue lui passe une fonction (lambda) : "voici ce qu'il faut faire avec un message d'erreur". Cette inversion de dependance garde le controleur testable.</p>
+
+    <h2>ControleurProduits</h2>
+    <p>Fichier : <code>src/main/java/com/magasin/controleur/ControleurProduits.java</code></p>
+<pre><code>public final class ControleurProduits {
+
+    private ControleurProduits() {}
+
+    public static List&lt;Produit&gt; listerTout() throws AppwriteException {
+        return ServiceProduit.listerTout();
+    }
+    public static Produit ajouter(Produit p) throws AppwriteException {
+        return ServiceProduit.ajouter(p);
+    }
+    public static Produit modifier(Produit p) throws AppwriteException {
+        return ServiceProduit.modifier(p);
+    }
+    public static void supprimer(String id) throws AppwriteException {
+        ServiceProduit.supprimer(id);
+    }
+}</code></pre>
+
+    <p>Ce controleur n'ajoute rien de visible. Mais il rend la couche d'abstraction explicite : si demain on change de backend (par exemple un cache local), on modifie le controleur sans toucher aux panneaux.</p>
+
+    <h2>ControleurFournisseurs et ControleurCommandes</h2>
+    <p>Memes patrons. Le controleur des commandes expose en plus <code>listerProduits()</code> pour alimenter le combo du dialogue de commande.</p>
+
+<pre><code>public static List&lt;Produit&gt; listerProduits() throws AppwriteException {
+    return ServiceProduit.listerTout();
+}</code></pre>
+
+    <div class="card accent">
+      <strong>Question typique :</strong> "Pourquoi des controleurs si fins ?" Reponse : pour respecter la separation des couches du MVC. Meme s'ils sont triviaux aujourd'hui, ils centralisent l'orchestration. Quand on devra ajouter une regle metier (par exemple "interdire la suppression d'un produit avec des commandes liees"), on aura un endroit naturel ou la mettre.
+    </div>
+
+    <footer class="page-footer">
+      <div class="authors">Mohamed Rayen Sbai &middot; Ranim Belguith</div>
+      <div>Controleurs &mdash; Magasin Pro</div>
+    </footer>
+  </main>
+</div>
+</body>
+</html>

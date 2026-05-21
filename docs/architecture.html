@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Architecture — Magasin Pro</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="logo">Magasin Pro</div>
+    <div class="tag">Documentation du projet</div>
+    <nav>
+      <ul>
+        <li><a href="index.html">Accueil</a></li>
+        <li><a href="architecture.html" class="active">Architecture</a></li>
+        <li><a href="configuration.html">Configuration et lancement</a></li>
+        <li class="section">Classes</li>
+        <li><a href="classes/modele.html">Modeles (POJO)</a></li>
+        <li><a href="classes/service.html">Services et Appwrite</a></li>
+        <li><a href="classes/securite.html">Securite</a></li>
+        <li><a href="classes/vue.html">Vues Swing</a></li>
+        <li><a href="classes/controleur.html">Controleurs</a></li>
+        <li><a href="classes/util.html">Utilitaires</a></li>
+        <li class="section">Code commente</li>
+        <li><a href="code.html">Walkthrough du code</a></li>
+        <li class="section">Examen</li>
+        <li><a href="faq.html">Questions du prof</a></li>
+      </ul>
+    </nav>
+  </aside>
+
+  <main class="content">
+    <h1>Architecture</h1>
+    <p class="lead">L'application est organisee en couches, dans l'esprit MVC. Chaque couche a une responsabilite unique et ne connait que la couche en dessous.</p>
+
+    <h2>Schema des couches</h2>
+<pre><code>+-------------------------------------------------------+
+|  Vue (Swing)  : Fenetres, panneaux, dialogues         |
++-------------------------------------------------------+
+                       v
++-------------------------------------------------------+
+|  Controleur   : Validation, SwingWorker, orchestration|
++-------------------------------------------------------+
+                       v
++-------------------------------------------------------+
+|  Service      : Logique metier + appels Appwrite      |
++-------------------------------------------------------+
+                       v
++-------------------------------------------------------+
+|  ClientAppwrite : HTTP + JSON (java.net.http + Gson)  |
++-------------------------------------------------------+
+                       v
+                  Appwrite Cloud
+</code></pre>
+
+    <h2>Arborescence du code source</h2>
+<pre><code>src/main/java/com/magasin/
+├── Application.java          (point d'entree, init FlatLaf)
+├── modele/                   (4 POJO : Produit, Fournisseur, Commande, Utilisateur)
+├── service/
+│   ├── ClientAppwrite.java   (wrapper HTTP)
+│   ├── AppwriteException.java
+│   ├── ServiceProduit.java
+│   ├── ServiceFournisseur.java
+│   ├── ServiceCommande.java
+│   └── ServiceUtilisateur.java
+├── securite/
+│   ├── GestionnaireMotDePasse.java   (BCrypt)
+│   └── SessionUtilisateur.java        (singleton utilisateur connecte)
+├── vue/
+│   ├── FenetreConnexion.java
+│   ├── FenetrePrincipale.java
+│   ├── PanneauProduits.java
+│   ├── PanneauFournisseurs.java
+│   ├── PanneauCommandes.java
+│   ├── PanneauUtilisateurs.java
+│   ├── DialogueProduit.java
+│   ├── DialogueFournisseur.java
+│   ├── DialogueCommande.java
+│   ├── DialogueUtilisateur.java
+│   └── composants/                    (boutons, panneaux, table styles)
+├── controleur/
+│   ├── ControleurConnexion.java
+│   ├── ControleurProduits.java
+│   ├── ControleurFournisseurs.java
+│   └── ControleurCommandes.java
+├── outils/
+│   └── GenererHashAdmin.java          (CLI pour generer le hash admin)
+└── util/
+    ├── Configuration.java             (lecture config.properties)
+    └── GestionnaireErreurs.java       (dialogues uniformes)
+</code></pre>
+
+    <h2>Flux de connexion</h2>
+    <ol>
+      <li>L'utilisateur ouvre l'app. Application.main() initialise FlatLaf, lit la configuration puis affiche <code>FenetreConnexion</code>.</li>
+      <li>L'utilisateur saisit son login et son mot de passe puis valide.</li>
+      <li><code>ControleurConnexion</code> recoit l'evenement et lance un <code>SwingWorker</code> pour ne pas geler l'interface.</li>
+      <li>Le worker appelle <code>ServiceUtilisateur.authentifier(user, mdp)</code>. Ce service liste les utilisateurs et compare le mot de passe avec le hash via <code>GestionnaireMotDePasse.verifier</code>.</li>
+      <li>Si OK, on stocke l'utilisateur dans <code>SessionUtilisateur</code> et on ouvre <code>FenetrePrincipale</code>. Sinon on affiche le message d'erreur sous le formulaire.</li>
+    </ol>
+
+    <h2>Flux d'un CRUD typique</h2>
+    <p>Exemple : ajout d'un produit.</p>
+    <ol>
+      <li>L'utilisateur clique sur "Ajouter" dans <code>PanneauProduits</code>.</li>
+      <li>Le panneau ouvre <code>DialogueProduit</code>. Le formulaire valide les entrees (nom non vide, quantite positive, prix positif).</li>
+      <li>A la validation, le panneau lance un <code>SwingWorker</code> qui appelle <code>ControleurProduits.ajouter(p)</code>.</li>
+      <li>Le controleur delegue a <code>ServiceProduit.ajouter(p)</code>, qui construit le JSON et appelle <code>ClientAppwrite.creerLigne</code>.</li>
+      <li>Le client envoie un <code>POST /v1/tablesdb/{db}/tables/produit/rows</code> avec les en-tetes Appwrite.</li>
+      <li>Au retour, le panneau recharge la table et affiche un message de succes.</li>
+    </ol>
+
+    <h2>Gestion des erreurs reseau</h2>
+    <p>Toute reponse HTTP hors 2xx leve une <code>AppwriteException</code> qui contient le code et le message renvoye par Appwrite. Cette exception traverse les couches jusqu'a la vue, qui l'affiche via <code>GestionnaireErreurs.erreur</code>.</p>
+
+    <h2>Concurrence</h2>
+    <p>Swing tourne sur un thread unique : l'EDT (Event Dispatch Thread). Bloquer ce thread pour un appel HTTP gele l'interface. Toutes les operations reseau passent donc par <code>SwingWorker</code> :</p>
+<pre><code>new SwingWorker&lt;Produit, Void&gt;() {
+    protected Produit doInBackground() throws Exception {
+        return ServiceProduit.ajouter(p);    // hors EDT
+    }
+    protected void done() {
+        get();                                // de retour sur l'EDT
+        rafraichir();
+    }
+}.execute();</code></pre>
+
+    <footer class="page-footer">
+      <div class="authors">Mohamed Rayen Sbai &middot; Ranim Belguith</div>
+      <div>Architecture &mdash; Magasin Pro</div>
+    </footer>
+  </main>
+</div>
+</body>
+</html>

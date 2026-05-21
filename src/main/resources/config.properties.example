@@ -1,0 +1,11 @@
+# Configuration Appwrite Cloud — copier vers config.properties et remplir
+APPWRITE_ENDPOINT=https://cloud.appwrite.io/v1
+APPWRITE_PROJECT_ID=remplacer_par_id_projet
+APPWRITE_API_KEY=remplacer_par_cle_api
+APPWRITE_DATABASE_ID=remplacer_par_id_base
+
+# Identifiants des tables (utiliser noms exacts si creees via UI)
+TABLE_PRODUIT=produit
+TABLE_FOURNISSEUR=fournisseur
+TABLE_COMMANDE=commande
+TABLE_UTILISATEUR=utilisateur
