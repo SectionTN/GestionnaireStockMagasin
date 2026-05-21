@@ -33,7 +33,8 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public final class DialogueCommande {
 
-    private DialogueCommande() {}
+    private DialogueCommande() {
+    }
 
     public static Commande afficher(Component parent, Commande existant, List<Produit> produits) {
         Window w = SwingUtilities.getWindowAncestor(parent);
@@ -43,11 +44,15 @@ public final class DialogueCommande {
         d.setLocationRelativeTo(parent);
 
         DefaultComboBoxModel<Produit> modeleCombo = new DefaultComboBoxModel<>();
-        for (Produit p : produits) modeleCombo.addElement(p);
+        for (Produit p : produits)
+            modeleCombo.addElement(p);
         JComboBox<Produit> combo = new JComboBox<>(modeleCombo);
         if (existant != null) {
             for (Produit p : produits) {
-                if (p.getId().equals(existant.getProduitId())) { combo.setSelectedItem(p); break; }
+                if (p.getId().equals(existant.getProduitId())) {
+                    combo.setSelectedItem(p);
+                    break;
+                }
             }
         }
 
@@ -61,8 +66,11 @@ public final class DialogueCommande {
         form.setBorder(BorderFactory.createEmptyBorder(20, 24, 20, 24));
 
         GridBagConstraints g = new GridBagConstraints();
-        g.gridx = 0; g.gridy = 0; g.fill = GridBagConstraints.HORIZONTAL;
-        g.weightx = 1; g.insets = new java.awt.Insets(6, 0, 6, 0);
+        g.gridx = 0;
+        g.gridy = 0;
+        g.fill = GridBagConstraints.HORIZONTAL;
+        g.weightx = 1;
+        g.insets = new java.awt.Insets(6, 0, 6, 0);
 
         ligne(form, g, "Produit", combo);
         ligne(form, g, "Quantite", champQte);
@@ -72,7 +80,8 @@ public final class DialogueCommande {
         actions.setBackground(Color.WHITE);
         JButton annuler = new JButton("Annuler");
         UI.BoutonPrimaire valider = new UI.BoutonPrimaire(existant == null ? "Enregistrer" : "Mettre a jour");
-        actions.add(annuler); actions.add(valider);
+        actions.add(annuler);
+        actions.add(valider);
 
         d.setLayout(new BorderLayout());
         d.add(form, BorderLayout.CENTER);
@@ -83,9 +92,11 @@ public final class DialogueCommande {
         valider.addActionListener(e -> {
             try {
                 Produit p = (Produit) combo.getSelectedItem();
-                if (p == null) throw new IllegalArgumentException("Selectionnez un produit.");
+                if (p == null)
+                    throw new IllegalArgumentException("Selectionnez un produit.");
                 int qte = Integer.parseInt(champQte.getText().trim());
-                if (qte <= 0) throw new IllegalArgumentException("Quantite doit etre > 0.");
+                if (qte <= 0)
+                    throw new IllegalArgumentException("Quantite doit etre > 0.");
                 String dateBrute = champDate.getText().trim();
                 String date = extraireDateISO(dateBrute);
                 LocalDate.parse(date, DateTimeFormatter.ISO_DATE);
@@ -107,14 +118,9 @@ public final class DialogueCommande {
         return ref.get();
     }
 
-    /**
-     * Extrait la portion yyyy-MM-dd d'une date entree. Accepte :
-     *   "2026-05-21"
-     *   "2026-05-21T00:00:00.000+00:00"
-     *   "2026-05-21T14:30:00Z"
-     */
     private static String extraireDateISO(String entree) {
-        if (entree == null) return "";
+        if (entree == null)
+            return "";
         String s = entree.trim();
         if (s.length() >= 10 && s.charAt(4) == '-' && s.charAt(7) == '-') {
             return s.substring(0, 10);
@@ -126,7 +132,8 @@ public final class DialogueCommande {
         JLabel l = new JLabel(label);
         l.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         l.setForeground(new Color(0x374151));
-        g.gridy++; form.add(l, g);
+        g.gridy++;
+        form.add(l, g);
         g.gridy++;
         c.setPreferredSize(new Dimension(0, 36));
         form.add(c, g);

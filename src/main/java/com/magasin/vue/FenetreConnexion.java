@@ -34,7 +34,6 @@ public class FenetreConnexion extends JFrame {
     public FenetreConnexion() {
         super("Gestionnaire de Stock — Connexion");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        // Taille adaptative : 70% de l'ecran logique, plafonnee
         Dimension ecran = java.awt.Toolkit.getDefaultToolkit().getScreenSize();
         int l = Math.min(960, (int) (ecran.width * 0.75));
         int h = Math.min(620, (int) (ecran.height * 0.80));
