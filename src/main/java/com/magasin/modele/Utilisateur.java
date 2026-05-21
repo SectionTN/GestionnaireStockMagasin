@@ -8,7 +8,7 @@ public class Utilisateur {
 
     private String id;
     private String username;
-    private String password; // hash bcrypt
+    private String password;
     private String role;
 
     public Utilisateur() {}

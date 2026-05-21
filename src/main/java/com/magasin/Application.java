@@ -55,13 +55,6 @@ public final class Application {
         });
     }
 
-    /**
-     * Detecte l'echelle UI. Ordre :
-     *   1) Env var MAGASIN_UI_SCALE (ex: "2.0")
-     *   2) Env var GDK_SCALE / GDK_DPI_SCALE
-     *   3) Defaut : 2.0 sur Linux (HiDPI commun), 1.0 ailleurs
-     * Override possible via -Dsun.java2d.uiScale=X au lancement.
-     */
     private static double detecterEchelle() {
         String env = System.getenv("MAGASIN_UI_SCALE");
         if (env != null && !env.isBlank()) {

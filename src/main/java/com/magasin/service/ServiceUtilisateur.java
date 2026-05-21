@@ -4,7 +4,6 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.magasin.modele.Utilisateur;
-import com.magasin.securite.GestionnaireMotDePasse;
 import com.magasin.util.Configuration;
 
 import java.util.ArrayList;
@@ -29,8 +28,6 @@ public final class ServiceUtilisateur {
     }
 
     public static Utilisateur trouverParUsername(String username) throws AppwriteException {
-        // Filtre cote client (liste petite pour application d'examen).
-        // Evite les soucis de syntaxe de requete TablesDB.
         for (Utilisateur u : listerTout()) {
             if (u.getUsername() != null && u.getUsername().equalsIgnoreCase(username)) {
                 return u;
@@ -39,40 +36,28 @@ public final class ServiceUtilisateur {
         return null;
     }
 
-    /** Verifie identifiants, retourne l'utilisateur si OK, null sinon. */
-    public static Utilisateur authentifier(String username, String motDePasseClair) throws AppwriteException {
+    public static Utilisateur authentifier(String username, String motDePasse) throws AppwriteException {
         Utilisateur u = trouverParUsername(username);
-        if (u == null) return null;
-        if (!GestionnaireMotDePasse.verifier(motDePasseClair, u.getPassword())) return null;
+        if (u == null || !motDePasse.equals(u.getPassword())) return null;
         return u;
     }
 
-    /** Ajoute un utilisateur. motDePasseClair sera hache. */
-    public static Utilisateur ajouter(String username, String motDePasseClair, String role) throws AppwriteException {
+    public static Utilisateur ajouter(String username, String motDePasse, String role) throws AppwriteException {
         JsonObject d = new JsonObject();
         d.addProperty("username", username);
-        d.addProperty("password", GestionnaireMotDePasse.hacher(motDePasseClair));
+        d.addProperty("password", motDePasse);
         d.addProperty("role", role);
-        JsonObject rep = ClientAppwrite.creerLigne(table(), d);
-        return depuisJson(rep);
+        return depuisJson(ClientAppwrite.creerLigne(table(), d));
     }
 
-    /**
-     * Modifie un utilisateur. Si nouveauMotDePasseClair != null/blank, le mot de passe
-     * est rehache et remplace. Sinon, hashStocke est conserve (passer u.getPassword()).
-     */
-    public static Utilisateur modifier(Utilisateur u, String nouveauMotDePasseClair) throws AppwriteException {
+    public static Utilisateur modifier(Utilisateur u, String nouveauMotDePasse) throws AppwriteException {
         if (u.getId() == null) throw new IllegalArgumentException("Id utilisateur manquant");
         JsonObject d = new JsonObject();
         d.addProperty("username", u.getUsername());
-        if (nouveauMotDePasseClair != null && !nouveauMotDePasseClair.isBlank()) {
-            d.addProperty("password", GestionnaireMotDePasse.hacher(nouveauMotDePasseClair));
-        } else {
-            d.addProperty("password", u.getPassword());
-        }
+        d.addProperty("password",
+                (nouveauMotDePasse != null && !nouveauMotDePasse.isBlank()) ? nouveauMotDePasse : u.getPassword());
         d.addProperty("role", u.getRole());
-        JsonObject rep = ClientAppwrite.mettreAJourLigne(table(), u.getId(), d);
-        return depuisJson(rep);
+        return depuisJson(ClientAppwrite.mettreAJourLigne(table(), u.getId(), d));
     }
 
     public static void supprimer(String id) throws AppwriteException {
