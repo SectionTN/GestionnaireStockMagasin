@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
 
-/** Chargeur de configuration depuis config.properties. */
 public final class Configuration {
 
     private static final Properties PROPRIETES = new Properties();

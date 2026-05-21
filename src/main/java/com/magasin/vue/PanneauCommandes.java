@@ -26,8 +26,11 @@ import java.util.Map;
 public class PanneauCommandes extends JPanel {
 
     private final DefaultTableModel modele = new DefaultTableModel(
-            new Object[]{"ID", "Produit", "Quantite", "Date"}, 0) {
-        @Override public boolean isCellEditable(int r, int c) { return false; }
+            new Object[] { "ID", "Produit", "Quantite", "Date" }, 0) {
+        @Override
+        public boolean isCellEditable(int r, int c) {
+            return false;
+        }
     };
     private final JTable tableau = new UI.Tableau(modele);
     private List<Produit> produitsCache = List.of();
@@ -69,8 +72,13 @@ public class PanneauCommandes extends JPanel {
         bSu.addActionListener(e -> supprimer());
         bRa.addActionListener(e -> rafraichir());
 
-        barre.add(bAj); barre.add(bMo); barre.add(bSu); barre.add(bRa);
-        JLabel c = new JLabel(); c.setForeground(new Color(0x6B7280)); barre.add(c);
+        barre.add(bAj);
+        barre.add(bMo);
+        barre.add(bSu);
+        barre.add(bRa);
+        JLabel c = new JLabel();
+        c.setForeground(new Color(0x6B7280));
+        barre.add(c);
         modele.addTableModelListener(e -> c.setText("  " + modele.getRowCount() + " commande(s)"));
         return barre;
     }
@@ -81,37 +89,54 @@ public class PanneauCommandes extends JPanel {
             return;
         }
         Commande c = DialogueCommande.afficher(this, null, produitsCache);
-        if (c != null) executer(() -> Appwrite.ajouterCommande(c), "Commande enregistree.");
+        if (c != null)
+            executer(() -> Appwrite.ajouterCommande(c), "Commande enregistree.");
     }
 
     private void modifier() {
         Commande cur = selectionnee();
-        if (cur == null) { GestionnaireErreurs.erreur(this, "Veuillez selectionner une commande."); return; }
+        if (cur == null) {
+            GestionnaireErreurs.erreur(this, "Veuillez selectionner une commande.");
+            return;
+        }
         Commande c = DialogueCommande.afficher(this, cur, produitsCache);
-        if (c == null) return;
+        if (c == null)
+            return;
         c.setId(cur.getId());
         executer(() -> Appwrite.modifierCommande(c), "Commande modifiee.");
     }
 
     private void supprimer() {
         Commande cur = selectionnee();
-        if (cur == null) { GestionnaireErreurs.erreur(this, "Veuillez selectionner une commande."); return; }
+        if (cur == null) {
+            GestionnaireErreurs.erreur(this, "Veuillez selectionner une commande.");
+            return;
+        }
         String nomProduit = nomParId.getOrDefault(cur.getProduitId(), "(produit inconnu)");
         if (!GestionnaireErreurs.confirmer(this,
                 "Supprimer cette commande de " + cur.getQuantite() + " x \"" + nomProduit + "\" ?\n"
-                + "Le stock du produit sera restitue.")) return;
-        executer(() -> { Appwrite.supprimerCommande(cur.getId()); return null; }, "Commande supprimee.");
+                        + "Le stock du produit sera restitue."))
+            return;
+        executer(() -> {
+            Appwrite.supprimerCommande(cur.getId());
+            return null;
+        }, "Commande supprimee.");
     }
 
     private Commande selectionnee() {
         int l = tableau.getSelectedRow();
-        if (l < 0) return null;
+        if (l < 0)
+            return null;
         int v = tableau.convertRowIndexToModel(l);
         String id = (String) modele.getValueAt(v, 0);
         String nomProduit = (String) modele.getValueAt(v, 1);
         // recuperer l'id produit depuis le cache
         String prodId = null;
-        for (Produit p : produitsCache) if (p.getNom().equals(nomProduit)) { prodId = p.getId(); break; }
+        for (Produit p : produitsCache)
+            if (p.getNom().equals(nomProduit)) {
+                prodId = p.getId();
+                break;
+            }
         return new Commande(id, prodId,
                 ((Number) modele.getValueAt(v, 2)).intValue(),
                 (String) modele.getValueAt(v, 3));
@@ -119,25 +144,29 @@ public class PanneauCommandes extends JPanel {
 
     public void rafraichir() {
         new SwingWorker<Object[], Void>() {
-            @Override protected Object[] doInBackground() throws Exception {
+            @Override
+            protected Object[] doInBackground() throws Exception {
                 List<Produit> prods = Appwrite.listerProduits();
                 List<Commande> cmds = Appwrite.listerCommandes();
-                return new Object[]{prods, cmds};
+                return new Object[] { prods, cmds };
             }
-            @Override @SuppressWarnings("unchecked")
+
+            @Override
+            @SuppressWarnings("unchecked")
             protected void done() {
                 try {
                     Object[] res = get();
                     produitsCache = (List<Produit>) res[0];
                     nomParId.clear();
-                    for (Produit p : produitsCache) nomParId.put(p.getId(), p.getNom());
+                    for (Produit p : produitsCache)
+                        nomParId.put(p.getId(), p.getNom());
 
                     List<Commande> cmds = (List<Commande>) res[1];
                     modele.setRowCount(0);
                     for (Commande c : cmds) {
                         String nom = nomParId.getOrDefault(c.getProduitId(), "(produit inconnu)");
-                        modele.addRow(new Object[]{c.getId(), nom, c.getQuantite(),
-                                formaterDate(c.getDateCommande())});
+                        modele.addRow(new Object[] { c.getId(), nom, c.getQuantite(),
+                                formaterDate(c.getDateCommande()) });
                     }
                 } catch (Exception ex) {
                     GestionnaireErreurs.erreur(PanneauCommandes.this,
@@ -147,9 +176,9 @@ public class PanneauCommandes extends JPanel {
         }.execute();
     }
 
-    /** Extrait yyyy-MM-dd d'une date Appwrite (peut etre ISO complet ou deja court). */
     private static String formaterDate(String date) {
-        if (date == null) return "";
+        if (date == null)
+            return "";
         String s = date.trim();
         if (s.length() >= 10 && s.charAt(4) == '-' && s.charAt(7) == '-') {
             return s.substring(0, 10);
@@ -157,13 +186,21 @@ public class PanneauCommandes extends JPanel {
         return s;
     }
 
-    private interface Act { Object executer() throws Exception; }
+    private interface Act {
+        Object executer() throws Exception;
+    }
 
     private void executer(Act a, String ok) {
         new SwingWorker<Object, Void>() {
-            @Override protected Object doInBackground() throws Exception { return a.executer(); }
-            @Override protected void done() {
-                try { get();
+            @Override
+            protected Object doInBackground() throws Exception {
+                return a.executer();
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    get();
                     SwingUtilities.invokeLater(() -> {
                         rafraichir();
                         GestionnaireErreurs.information(PanneauCommandes.this, ok);

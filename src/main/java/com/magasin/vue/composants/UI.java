@@ -23,25 +23,16 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 
-/**
- * Composants Swing stylises reutilises dans toute l'interface.
- *   - BoutonPrimaire : bouton accentue avec coins arrondis
- *   - Gradient       : panneau a degrade de couleurs
- *   - Carte          : panneau avec coins arrondis et ombre
- *   - Tableau        : JTable stylise avec rendu alterne
- *   - EnTete         : titre + sous-titre uniformes
- */
 public final class UI {
 
-    private UI() {}
+    private UI() {
+    }
 
-    // ----------------------------------------------------------------
-    // BoutonPrimaire
-    // ----------------------------------------------------------------
     public static class BoutonPrimaire extends JButton {
         public BoutonPrimaire(String texte) {
             this(texte, Application.COULEUR_ACCENT, Color.WHITE);
         }
+
         public BoutonPrimaire(String texte, Color fond, Color premier) {
             super(texte);
             setFocusPainted(false);
@@ -56,17 +47,17 @@ public final class UI {
         }
     }
 
-    // ----------------------------------------------------------------
-    // Gradient
-    // ----------------------------------------------------------------
     public static class Gradient extends JPanel {
         private final Color debut, fin;
+
         public Gradient(Color debut, Color fin) {
             this.debut = debut;
             this.fin = fin;
             setOpaque(false);
         }
-        @Override protected void paintComponent(Graphics g) {
+
+        @Override
+        protected void paintComponent(Graphics g) {
             Graphics2D g2 = (Graphics2D) g.create();
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
             g2.setPaint(new GradientPaint(0, 0, debut, getWidth(), getHeight(), fin));
@@ -76,20 +67,23 @@ public final class UI {
         }
     }
 
-    // ----------------------------------------------------------------
-    // Carte
-    // ----------------------------------------------------------------
     public static class Carte extends JPanel {
         private final int rayon;
         private final Color fond;
-        public Carte() { this(18, Color.WHITE); }
+
+        public Carte() {
+            this(18, Color.WHITE);
+        }
+
         public Carte(int rayon, Color fond) {
             this.rayon = rayon;
             this.fond = fond;
             setOpaque(false);
             setBorder(new EmptyBorder(24, 28, 24, 28));
         }
-        @Override protected void paintComponent(Graphics g) {
+
+        @Override
+        protected void paintComponent(Graphics g) {
             Graphics2D g2 = (Graphics2D) g.create();
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
             g2.setColor(new Color(0, 0, 0, 18));
@@ -101,9 +95,6 @@ public final class UI {
         }
     }
 
-    // ----------------------------------------------------------------
-    // Tableau stylise
-    // ----------------------------------------------------------------
     public static class Tableau extends JTable {
         public Tableau(TableModel modele) {
             super(modele);
@@ -122,7 +113,8 @@ public final class UI {
             entete.setReorderingAllowed(false);
 
             setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
-                @Override public Component getTableCellRendererComponent(JTable t, Object v,
+                @Override
+                public Component getTableCellRendererComponent(JTable t, Object v,
                         boolean sel, boolean foc, int r, int c) {
                     Component comp = super.getTableCellRendererComponent(t, v, sel, foc, r, c);
                     if (sel) {
@@ -139,9 +131,6 @@ public final class UI {
         }
     }
 
-    // ----------------------------------------------------------------
-    // EnTete (titre + sous-titre)
-    // ----------------------------------------------------------------
     public static class EnTete extends JPanel {
         public EnTete(String titre, String sousTitre) {
             super(new BorderLayout());
@@ -156,8 +145,10 @@ public final class UI {
             JPanel gauche = new JPanel();
             gauche.setOpaque(false);
             gauche.setLayout(new javax.swing.BoxLayout(gauche, javax.swing.BoxLayout.Y_AXIS));
-            t.setAlignmentX(0f); s.setAlignmentX(0f);
-            gauche.add(t); gauche.add(s);
+            t.setAlignmentX(0f);
+            s.setAlignmentX(0f);
+            gauche.add(t);
+            gauche.add(s);
             add(gauche, BorderLayout.WEST);
         }
     }

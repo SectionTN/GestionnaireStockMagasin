@@ -1,6 +1,5 @@
 package com.magasin.modele;
 
-/** Utilisateur de l'application. role = ADMINISTRATEUR ou GESTIONNAIRE. */
 public class Utilisateur {
 
     public static final String ROLE_ADMINISTRATEUR = "administrateur";

@@ -10,7 +10,7 @@ import javax.swing.UIManager;
 import java.awt.Color;
 import java.awt.Font;
 
-/** Point d'entree de l'application Gestionnaire de Stock de Magasin. */
+
 public final class Application {
 
     public static final Color COULEUR_ACCENT     = new Color(0x2D6CDF);

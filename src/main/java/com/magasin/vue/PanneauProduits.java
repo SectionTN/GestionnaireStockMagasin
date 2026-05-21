@@ -21,7 +21,6 @@ import java.awt.Component;
 import java.awt.FlowLayout;
 import java.util.List;
 
-/** Panneau de gestion des produits — CRUD complet. */
 public class PanneauProduits extends JPanel {
 
     private final DefaultTableModel modele = new DefaultTableModel(

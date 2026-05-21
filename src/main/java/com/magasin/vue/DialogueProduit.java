@@ -1,6 +1,5 @@
 package com.magasin.vue;
 
-import com.magasin.service.Appwrite;
 import com.magasin.vue.composants.UI;
 
 import com.magasin.modele.Produit;
@@ -27,7 +26,6 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.util.concurrent.atomic.AtomicReference;
 
-/** Formulaire modal pour ajouter/modifier un produit. */
 public final class DialogueProduit {
 
     private DialogueProduit() {}

@@ -10,7 +10,6 @@ import com.magasin.securite.SessionUtilisateur;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
-import javax.swing.ImageIcon;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -21,10 +20,8 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
-import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 
-/** Fenetre de connexion stylisee. */
 public class FenetreConnexion extends JFrame {
 
     private final JTextField champUsername = new JTextField();
@@ -126,7 +123,6 @@ public class FenetreConnexion extends JFrame {
         etiquetteMessage.setAlignmentX(0f);
         etiquetteMessage.setBorder(BorderFactory.createEmptyBorder(8, 0, 0, 0));
 
-        // Entree clavier valide aussi
         champMotDePasse.addActionListener(e -> tenterConnexion());
 
         carte.add(titre);
@@ -166,17 +162,29 @@ public class FenetreConnexion extends JFrame {
         final String p = new String(champMotDePasse.getPassword());
         etiquetteMessage.setText(" ");
 
-        if (u.isBlank()) { afficherErreur("Veuillez saisir un nom d'utilisateur."); return; }
-        if (p.isEmpty()) { afficherErreur("Veuillez saisir un mot de passe."); return; }
+        if (u.isBlank()) {
+            afficherErreur("Veuillez saisir un nom d'utilisateur.");
+            return;
+        }
+        if (p.isEmpty()) {
+            afficherErreur("Veuillez saisir un mot de passe.");
+            return;
+        }
 
         new javax.swing.SwingWorker<Utilisateur, Void>() {
-            @Override protected Utilisateur doInBackground() throws Exception {
+            @Override
+            protected Utilisateur doInBackground() throws Exception {
                 return Appwrite.authentifier(u, p);
             }
-            @Override protected void done() {
+
+            @Override
+            protected void done() {
                 try {
                     Utilisateur ut = get();
-                    if (ut == null) { afficherErreur("Identifiants incorrects."); return; }
+                    if (ut == null) {
+                        afficherErreur("Identifiants incorrects.");
+                        return;
+                    }
                     SessionUtilisateur.connecter(ut);
                     dispose();
                     new FenetrePrincipale().setVisible(true);

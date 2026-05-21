@@ -23,8 +23,11 @@ import java.util.List;
 public class PanneauFournisseurs extends JPanel {
 
     private final DefaultTableModel modele = new DefaultTableModel(
-            new Object[]{"ID", "Nom", "Contact"}, 0) {
-        @Override public boolean isCellEditable(int r, int c) { return false; }
+            new Object[] { "ID", "Nom", "Contact" }, 0) {
+        @Override
+        public boolean isCellEditable(int r, int c) {
+            return false;
+        }
     };
     private final JTable tableau = new UI.Tableau(modele);
 
@@ -64,36 +67,54 @@ public class PanneauFournisseurs extends JPanel {
         bSu.addActionListener(e -> supprimer());
         bRa.addActionListener(e -> rafraichir());
 
-        barre.add(bAj); barre.add(bMo); barre.add(bSu); barre.add(bRa);
-        JLabel c = new JLabel(); c.setForeground(new Color(0x6B7280)); barre.add(c);
+        barre.add(bAj);
+        barre.add(bMo);
+        barre.add(bSu);
+        barre.add(bRa);
+        JLabel c = new JLabel();
+        c.setForeground(new Color(0x6B7280));
+        barre.add(c);
         modele.addTableModelListener(e -> c.setText("  " + modele.getRowCount() + " element(s)"));
         return barre;
     }
 
     private void ajouter() {
         Fournisseur f = DialogueFournisseur.afficher(this, null);
-        if (f != null) executer(() -> Appwrite.ajouterFournisseur(f), "Fournisseur ajoute.");
+        if (f != null)
+            executer(() -> Appwrite.ajouterFournisseur(f), "Fournisseur ajoute.");
     }
 
     private void modifier() {
         Fournisseur cur = selectionne();
-        if (cur == null) { GestionnaireErreurs.erreur(this, "Veuillez selectionner un fournisseur."); return; }
+        if (cur == null) {
+            GestionnaireErreurs.erreur(this, "Veuillez selectionner un fournisseur.");
+            return;
+        }
         Fournisseur f = DialogueFournisseur.afficher(this, cur);
-        if (f == null) return;
+        if (f == null)
+            return;
         f.setId(cur.getId());
         executer(() -> Appwrite.modifierFournisseur(f), "Fournisseur modifie.");
     }
 
     private void supprimer() {
         Fournisseur cur = selectionne();
-        if (cur == null) { GestionnaireErreurs.erreur(this, "Veuillez selectionner un fournisseur."); return; }
-        if (!GestionnaireErreurs.confirmer(this, "Supprimer \"" + cur.getNom() + "\" ?")) return;
-        executer(() -> { Appwrite.supprimerFournisseur(cur.getId()); return null; }, "Fournisseur supprime.");
+        if (cur == null) {
+            GestionnaireErreurs.erreur(this, "Veuillez selectionner un fournisseur.");
+            return;
+        }
+        if (!GestionnaireErreurs.confirmer(this, "Supprimer \"" + cur.getNom() + "\" ?"))
+            return;
+        executer(() -> {
+            Appwrite.supprimerFournisseur(cur.getId());
+            return null;
+        }, "Fournisseur supprime.");
     }
 
     private Fournisseur selectionne() {
         int l = tableau.getSelectedRow();
-        if (l < 0) return null;
+        if (l < 0)
+            return null;
         int v = tableau.convertRowIndexToModel(l);
         return new Fournisseur((String) modele.getValueAt(v, 0),
                 (String) modele.getValueAt(v, 1), (String) modele.getValueAt(v, 2));
@@ -101,14 +122,17 @@ public class PanneauFournisseurs extends JPanel {
 
     public void rafraichir() {
         new SwingWorker<List<Fournisseur>, Void>() {
-            @Override protected List<Fournisseur> doInBackground() throws Exception {
+            @Override
+            protected List<Fournisseur> doInBackground() throws Exception {
                 return Appwrite.listerFournisseurs();
             }
-            @Override protected void done() {
+
+            @Override
+            protected void done() {
                 try {
                     modele.setRowCount(0);
                     for (Fournisseur f : get()) {
-                        modele.addRow(new Object[]{f.getId(), f.getNom(), f.getContact()});
+                        modele.addRow(new Object[] { f.getId(), f.getNom(), f.getContact() });
                     }
                 } catch (Exception ex) {
                     GestionnaireErreurs.erreur(PanneauFournisseurs.this,
@@ -118,13 +142,21 @@ public class PanneauFournisseurs extends JPanel {
         }.execute();
     }
 
-    private interface Act { Object executer() throws Exception; }
+    private interface Act {
+        Object executer() throws Exception;
+    }
 
     private void executer(Act a, String ok) {
         new SwingWorker<Object, Void>() {
-            @Override protected Object doInBackground() throws Exception { return a.executer(); }
-            @Override protected void done() {
-                try { get();
+            @Override
+            protected Object doInBackground() throws Exception {
+                return a.executer();
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    get();
                     SwingUtilities.invokeLater(() -> {
                         rafraichir();
                         GestionnaireErreurs.information(PanneauFournisseurs.this, ok);

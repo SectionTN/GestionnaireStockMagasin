@@ -21,26 +21,15 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Couche unique d'acces a Appwrite Cloud (API TablesDB) :
- *   - methodes HTTP de bas niveau (creer, lister, modifier, supprimer une ligne)
- *   - methodes CRUD par entite (produits, fournisseurs, commandes, utilisateurs)
- *   - logique metier des commandes (verification + ajustement du stock)
- */
+
 public final class Appwrite {
 
-    // ----------------------------------------------------------------
-    // Exception
-    // ----------------------------------------------------------------
     public static class Exception extends java.lang.Exception {
         private final int codeHttp;
         public Exception(String message, int codeHttp) { super(message); this.codeHttp = codeHttp; }
         public int getCodeHttp() { return codeHttp; }
     }
 
-    // ----------------------------------------------------------------
-    // Client HTTP
-    // ----------------------------------------------------------------
     private static final HttpClient HTTP = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(15)).build();
 
@@ -111,9 +100,6 @@ public final class Appwrite {
         return envoyer(requeteBase(basePourTable(tableId) + "/" + rowId).GET().build());
     }
 
-    // ----------------------------------------------------------------
-    // Helpers JSON
-    // ----------------------------------------------------------------
     private static String extraireId(JsonObject o) {
         if (o.has("$id")) return o.get("$id").getAsString();
         if (o.has("id"))  return o.get("id").getAsString();
@@ -129,9 +115,6 @@ public final class Appwrite {
         return o.has(k) && !o.get(k).isJsonNull() ? o.get(k).getAsDouble() : 0.0;
     }
 
-    // ----------------------------------------------------------------
-    // PRODUIT
-    // ----------------------------------------------------------------
     public static List<Produit> listerProduits() throws Exception {
         List<Produit> r = new ArrayList<>();
         for (JsonElement el : listerLignes(Configuration.tableProduit()))
@@ -164,9 +147,6 @@ public final class Appwrite {
                 optDbl(o, "prix"), optStr(o, "fournisseur"));
     }
 
-    // ----------------------------------------------------------------
-    // FOURNISSEUR
-    // ----------------------------------------------------------------
     public static List<Fournisseur> listerFournisseurs() throws Exception {
         List<Fournisseur> r = new ArrayList<>();
         for (JsonElement el : listerLignes(Configuration.tableFournisseur()))
@@ -191,10 +171,6 @@ public final class Appwrite {
     private static Fournisseur fournisseurDepuisJson(JsonObject o) {
         return new Fournisseur(extraireId(o), optStr(o, "nom"), optStr(o, "contact"));
     }
-
-    // ----------------------------------------------------------------
-    // COMMANDE (avec gestion du stock)
-    // ----------------------------------------------------------------
     public static List<Commande> listerCommandes() throws Exception {
         List<Commande> r = new ArrayList<>();
         for (JsonElement el : listerLignes(Configuration.tableCommande()))
@@ -271,9 +247,6 @@ public final class Appwrite {
                 optInt(o, "quantite"), optStr(o, "date_commande"));
     }
 
-    // ----------------------------------------------------------------
-    // UTILISATEUR
-    // ----------------------------------------------------------------
     public static List<Utilisateur> listerUtilisateurs() throws Exception {
         List<Utilisateur> r = new ArrayList<>();
         for (JsonElement el : listerLignes(Configuration.tableUtilisateur()))

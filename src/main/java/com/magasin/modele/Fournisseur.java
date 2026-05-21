@@ -1,6 +1,5 @@
 package com.magasin.modele;
 
-/** Fournisseur de produits. */
 public class Fournisseur {
 
     private String id;

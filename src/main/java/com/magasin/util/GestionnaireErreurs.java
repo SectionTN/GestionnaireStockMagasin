@@ -3,7 +3,6 @@ package com.magasin.util;
 import javax.swing.JOptionPane;
 import java.awt.Component;
 
-/** Utilitaire d'affichage uniforme des erreurs et messages. */
 public final class GestionnaireErreurs {
 
     private GestionnaireErreurs() {}

@@ -21,12 +21,14 @@ import java.awt.Color;
 import java.awt.FlowLayout;
 import java.util.List;
 
-/** Gestion des utilisateurs — reserve aux administrateurs. */
 public class PanneauUtilisateurs extends JPanel {
 
     private final DefaultTableModel modele = new DefaultTableModel(
-            new Object[]{"ID", "Nom d'utilisateur", "Role"}, 0) {
-        @Override public boolean isCellEditable(int r, int c) { return false; }
+            new Object[] { "ID", "Nom d'utilisateur", "Role" }, 0) {
+        @Override
+        public boolean isCellEditable(int r, int c) {
+            return false;
+        }
     };
     private final JTable tableau = new UI.Tableau(modele);
 
@@ -66,15 +68,21 @@ public class PanneauUtilisateurs extends JPanel {
         bSu.addActionListener(e -> supprimer());
         bRa.addActionListener(e -> rafraichir());
 
-        barre.add(bAj); barre.add(bMo); barre.add(bSu); barre.add(bRa);
-        JLabel c = new JLabel(); c.setForeground(new Color(0x6B7280)); barre.add(c);
+        barre.add(bAj);
+        barre.add(bMo);
+        barre.add(bSu);
+        barre.add(bRa);
+        JLabel c = new JLabel();
+        c.setForeground(new Color(0x6B7280));
+        barre.add(c);
         modele.addTableModelListener(e -> c.setText("  " + modele.getRowCount() + " utilisateur(s)"));
         return barre;
     }
 
     private void ajouter() {
         DialogueUtilisateur.Resultat r = DialogueUtilisateur.afficher(this, null);
-        if (r == null) return;
+        if (r == null)
+            return;
         executer(() -> Appwrite.ajouterUtilisateur(
                 r.utilisateur.getUsername(), r.motDePasseClair, r.utilisateur.getRole()),
                 "Utilisateur ajoute.");
@@ -82,35 +90,49 @@ public class PanneauUtilisateurs extends JPanel {
 
     private void modifier() {
         Utilisateur sel = selectionne();
-        if (sel == null) { GestionnaireErreurs.erreur(this, "Veuillez selectionner un utilisateur."); return; }
+        if (sel == null) {
+            GestionnaireErreurs.erreur(this, "Veuillez selectionner un utilisateur.");
+            return;
+        }
         // Recuperer le hash courant pour conserver le mot de passe si non modifie
         try {
             Utilisateur complet = Appwrite.obtenirUtilisateur(sel.getId());
-            if (complet != null) sel = complet;
-        } catch (Exception ex) { /* ignore — on continuera avec sel partiel */ }
+            if (complet != null)
+                sel = complet;
+        } catch (Exception ex) {
+            /* ignore — on continuera avec sel partiel */ }
 
         DialogueUtilisateur.Resultat r = DialogueUtilisateur.afficher(this, sel);
-        if (r == null) return;
+        if (r == null)
+            return;
         Utilisateur u = r.utilisateur;
         executer(() -> Appwrite.modifierUtilisateur(u, r.motDePasseClair), "Utilisateur modifie.");
     }
 
     private void supprimer() {
         Utilisateur sel = selectionne();
-        if (sel == null) { GestionnaireErreurs.erreur(this, "Veuillez selectionner un utilisateur."); return; }
+        if (sel == null) {
+            GestionnaireErreurs.erreur(this, "Veuillez selectionner un utilisateur.");
+            return;
+        }
         Utilisateur courant = SessionUtilisateur.utilisateurCourant();
         if (courant != null && courant.getId().equals(sel.getId())) {
             GestionnaireErreurs.erreur(this, "Vous ne pouvez pas supprimer votre propre compte.");
             return;
         }
         if (!GestionnaireErreurs.confirmer(this,
-                "Supprimer definitivement \"" + sel.getUsername() + "\" ?")) return;
-        executer(() -> { Appwrite.supprimerUtilisateur(sel.getId()); return null; }, "Utilisateur supprime.");
+                "Supprimer definitivement \"" + sel.getUsername() + "\" ?"))
+            return;
+        executer(() -> {
+            Appwrite.supprimerUtilisateur(sel.getId());
+            return null;
+        }, "Utilisateur supprime.");
     }
 
     private Utilisateur selectionne() {
         int l = tableau.getSelectedRow();
-        if (l < 0) return null;
+        if (l < 0)
+            return null;
         int v = tableau.convertRowIndexToModel(l);
         return new Utilisateur(
                 (String) modele.getValueAt(v, 0),
@@ -121,14 +143,17 @@ public class PanneauUtilisateurs extends JPanel {
 
     public void rafraichir() {
         new SwingWorker<List<Utilisateur>, Void>() {
-            @Override protected List<Utilisateur> doInBackground() throws Exception {
+            @Override
+            protected List<Utilisateur> doInBackground() throws Exception {
                 return Appwrite.listerUtilisateurs();
             }
-            @Override protected void done() {
+
+            @Override
+            protected void done() {
                 try {
                     modele.setRowCount(0);
                     for (Utilisateur u : get()) {
-                        modele.addRow(new Object[]{u.getId(), u.getUsername(), u.getRole()});
+                        modele.addRow(new Object[] { u.getId(), u.getUsername(), u.getRole() });
                     }
                 } catch (Exception ex) {
                     GestionnaireErreurs.erreur(PanneauUtilisateurs.this,
@@ -138,13 +163,21 @@ public class PanneauUtilisateurs extends JPanel {
         }.execute();
     }
 
-    private interface Act { Object executer() throws Exception; }
+    private interface Act {
+        Object executer() throws Exception;
+    }
 
     private void executer(Act a, String ok) {
         new SwingWorker<Object, Void>() {
-            @Override protected Object doInBackground() throws Exception { return a.executer(); }
-            @Override protected void done() {
-                try { get();
+            @Override
+            protected Object doInBackground() throws Exception {
+                return a.executer();
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    get();
                     SwingUtilities.invokeLater(() -> {
                         rafraichir();
                         GestionnaireErreurs.information(PanneauUtilisateurs.this, ok);

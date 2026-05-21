@@ -1,6 +1,5 @@
 package com.magasin.vue;
 
-import com.magasin.service.Appwrite;
 import com.magasin.vue.composants.UI;
 
 import com.magasin.modele.Commande;

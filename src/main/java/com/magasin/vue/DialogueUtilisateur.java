@@ -26,12 +26,11 @@ import java.awt.GridBagLayout;
 import java.awt.Window;
 import java.util.concurrent.atomic.AtomicReference;
 
-/** Formulaire utilisateur. Renvoie un tableau [Utilisateur, motDePasseClairOuVide]. */
 public final class DialogueUtilisateur {
 
     public static final class Resultat {
         public final Utilisateur utilisateur;
-        public final String motDePasseClair; // null si non modifie
+        public final String motDePasseClair;
         public Resultat(Utilisateur u, String mdp) { this.utilisateur = u; this.motDePasseClair = mdp; }
     }
 

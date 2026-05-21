@@ -1,6 +1,5 @@
 package com.magasin.modele;
 
-/** Produit du magasin. id = $id Appwrite (string). */
 public class Produit {
 
     private String id;

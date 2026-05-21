@@ -1,6 +1,5 @@
 package com.magasin.modele;
 
-/** Commande d'un produit. dateCommande = ISO-8601 (yyyy-MM-dd). */
 public class Commande {
 
     private String id;

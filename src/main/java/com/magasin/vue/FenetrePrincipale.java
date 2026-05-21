@@ -26,7 +26,6 @@ import java.awt.GridBagLayout;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Fenetre principale avec barre laterale + zone de contenu. */
 public class FenetrePrincipale extends JFrame {
 
     private static final String CLE_PRODUITS     = "PRODUITS";

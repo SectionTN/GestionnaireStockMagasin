@@ -2,7 +2,6 @@ package com.magasin.securite;
 
 import com.magasin.modele.Utilisateur;
 
-/** Singleton de session — utilisateur connecte courant. */
 public final class SessionUtilisateur {
 
     private static Utilisateur utilisateurCourant;
