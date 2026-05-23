@@ -7,4 +7,4 @@ target/
 .classpath
 .project
 .settings/
-# src/main/resources/config.properties commiting it for purpose :))) this project will not stay for so much so that's ok
+src/main/resources/config.properties
